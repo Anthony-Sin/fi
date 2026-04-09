@@ -1,0 +1,1467 @@
+Metadata-Version: 2.4
+Name: desktop-automation-perception
+Version: 0.1.0
+Summary: Desktop environment perception component for OS-level automation.
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+
+# Desktop Automation Perception
+
+This package implements only the desktop-state perception component for a larger OS-level automation system.
+
+It captures the current desktop state using a prioritized strategy:
+
+1. Accessibility tree
+2. OCR text extraction
+3. Template image matching
+4. AI vision model
+
+Each perception result carries a confidence score and standardized metadata so it can be consumed by a larger automation pipeline.
+
+## Package Layout
+
+The package now exposes grouped domain entrypoints in addition to the backward-compatible root imports:
+
+- `desktop_automation_perception.desktop`
+- `desktop_automation_perception.ai`
+- `desktop_automation_perception.automation`
+- `desktop_automation_perception.accounts`
+- `desktop_automation_perception.agents`
+- `desktop_automation_perception.observability`
+- `desktop_automation_perception.resilience`
+- `desktop_automation_perception.knowledge`
+
+A shared `desktop_automation_perception.contracts` module centralizes runtime dependency contracts so the implementation modules no longer carry repeated placeholder-style protocol stubs.
+
+## Included
+
+- Typed perception result models
+- Provider interface and execution context
+- Priority-based orchestrator
+- Multi-strategy element locator with threshold-aware fallback results
+- Safe input simulation with focus checks, visibility checks, inter-action delay, and dry-run mode
+- Window management with enumeration, focus, move/resize, minimize/maximize, and new-window detection
+- Clipboard automation with read/write, monitoring, stabilization waits, event logging, and paste verification
+- Template image matching with ROI-aware searches, multi-template results, and reference library capture
+- OCR extraction with language configuration, confidence filtering, and resilient text lookup
+- Accessibility tree reading with structured UI element queries and raw window-property fallback
+- Screen state verification with polling, timeout control, and structured pass/fail reports
+- Screen change detection with screenshot diffing, thresholds, and blocking wait-for-change support
+- Persistent account registry with usage history and active-account management
+- Credential vault interface with encrypted storage, access logging, and expiry-aware retrieval
+- Browser profile switching with per-account profile mappings and session persistence tracking
+- Session state tracking with logout detection, health logs, and re-auth triggers
+- Account rotation orchestration with batching, cooldowns, unhealthy-account skipping, and sequential/parallel modes
+- Prompt template management with reusable prompt bodies, versioning, and variable substitution
+- Target-application prompt injection with field discovery, multiline normalization, and read-back verification
+- AI interface navigation with configurable selectors, prompt submission, streaming completion waits, response extraction, and timeout/error handling
+- Structured data extraction for tables, forms, and text blocks with schema mapping and paginated collection
+- Workflow audit logging with append-only persistence, credential redaction, filtering, and JSON/CSV export
+- Performance metrics collection with rolling windows, baseline degradation detection, and Prometheus-style exposition
+- Workflow report generation with timeline summaries, unusual-pattern highlights, DLQ/escalation coverage, and failure screenshot links
+- Data export pipelines for buffered structured records with deduplication, schema validation, retryable delivery, and destination logging
+- Provider implementations for:
+  - accessibility
+  - OCR
+  - template matching
+  - AI vision
+- Basic tests for ordering and confidence handling
+
+## Not Included
+
+- Input simulation
+- Workflow execution
+- Account switching
+- Window control logic beyond perception
+- Any unrelated automation modules
+
+## Example
+
+```python
+from desktop_automation_perception import DesktopPerceptionEngine
+from desktop_automation_perception.providers import (
+    AccessibilityProvider,
+    OCRProvider,
+    TemplateMatchingProvider,
+    AIVisionProvider,
+)
+
+engine = DesktopPerceptionEngine(
+    providers=[
+        AccessibilityProvider(),
+        OCRProvider(),
+        TemplateMatchingProvider(),
+        AIVisionProvider(),
+    ]
+)
+
+state = engine.capture_state()
+print(state.best_summary())
+```
+
+## Element Locator
+
+```python
+from desktop_automation_perception import LocatorTarget, MultiStrategyElementLocator
+
+locator = MultiStrategyElementLocator(confidence_threshold=0.8)
+result = locator.locate(
+    desktop_state=state,
+    target=LocatorTarget(text="Send", element_type="button"),
+)
+
+if result.succeeded:
+    print(result.center, result.bounds, result.confidence)
+else:
+    print(result.reason, result.best_candidate)
+```
+
+## Safe Input Simulation
+
+```python
+from desktop_automation_perception import (
+    InputAction,
+    InputActionType,
+    InputTarget,
+    PyAutoGUIBackend,
+    SafeInputSimulator,
+    ScreenBounds,
+    StaticScreenInspector,
+    Win32WindowManager,
+    WindowReference,
+)
+
+simulator = SafeInputSimulator(
+    backend=PyAutoGUIBackend.create(),
+    window_manager=Win32WindowManager(),
+    screen_inspector=StaticScreenInspector(ScreenBounds(width=1920, height=1080)),
+    inter_action_delay_seconds=0.2,
+    dry_run=True,
+)
+
+result = simulator.run(
+    [
+        InputAction(
+            action_type=InputActionType.CLICK,
+            target=InputTarget(
+                window=WindowReference(title="Untitled - Notepad"),
+                element_bounds=(100, 100, 220, 140),
+            ),
+        ),
+        InputAction(
+            action_type=InputActionType.TYPE_TEXT,
+            target=InputTarget(window=WindowReference(title="Untitled - Notepad")),
+            text="hello world",
+        ),
+    ]
+)
+```
+
+## Window Management
+
+```python
+from desktop_automation_perception import DesktopWindowManager
+
+manager = DesktopWindowManager(timeout_seconds=2.0, retry_count=8)
+
+windows = manager.list_windows()
+editor = manager.focus_window(title="Notepad")
+
+if editor.succeeded and editor.window is not None:
+    manager.move_resize_window(editor.window.handle, x=100, y=100, width=1200, height=800)
+    manager.maximize_window(editor.window.handle)
+
+new_window = manager.wait_for_new_window()
+```
+
+## Clipboard Automation
+
+```python
+from desktop_automation_perception import (
+    ClipboardManager,
+    ClipboardPasteMode,
+    InputTarget,
+    SafeInputSimulator,
+    Win32ClipboardBackend,
+    WindowReference,
+)
+
+clipboard = ClipboardManager(
+    backend=Win32ClipboardBackend(),
+    stabilization_wait_seconds=0.2,
+)
+
+clipboard.write_text("hello from clipboard", encoding="utf-8")
+content = clipboard.read_clipboard()
+
+verification = clipboard.paste_and_verify(
+    text="hello from clipboard",
+    input_runner=simulator,
+    target=InputTarget(window=WindowReference(title="Untitled - Notepad")),
+    readback=lambda: "hello from clipboard",
+    mode=ClipboardPasteMode.PASTE,
+)
+```
+
+## Template Image Matching
+
+```python
+from desktop_automation_perception import (
+    OpenCVImageMatcherBackend,
+    TemplateImageMatcher,
+    TemplateSearchRequest,
+)
+
+matcher = TemplateImageMatcher(backend=OpenCVImageMatcherBackend())
+
+results = matcher.search(
+    screenshot_path="screen.png",
+    requests=[
+        TemplateSearchRequest(
+            template_name="send_button",
+            template_path="templates/send.png",
+            threshold=0.86,
+            region_of_interest=(800, 500, 1500, 980),
+        ),
+        TemplateSearchRequest(
+            template_name="profile_avatar",
+            template_path="templates/avatar.png",
+            threshold=0.8,
+        ),
+    ],
+)
+
+reference = matcher.capture_reference_template(
+    name="send button",
+    output_directory="reference_library",
+    bounds=(900, 700, 980, 740),
+    application_name="Chat App",
+)
+```
+
+## OCR Text Extraction
+
+```python
+from desktop_automation_perception import OCRExtractor, TesseractOCRBackend
+
+ocr = OCRExtractor(backend=TesseractOCRBackend())
+
+result = ocr.extract_text(
+    region_of_interest=(100, 100, 1200, 800),
+    language="eng",
+    minimum_confidence=0.65,
+)
+
+match = ocr.find_text(
+    target="continue",
+    region_of_interest=(100, 100, 1200, 800),
+    language="eng",
+    minimum_confidence=0.65,
+)
+```
+
+## Accessibility Tree Reading
+
+```python
+from desktop_automation_perception import AccessibilityTreeReader
+
+reader = AccessibilityTreeReader()
+tree = reader.read_active_application_tree()
+
+buttons = reader.find_elements(name="Send", role="Button")
+if buttons.matches:
+    first = buttons.matches[0]
+    children = reader.enumerate_children(first)
+    text = reader.get_element_text(first)
+    enabled = reader.is_element_enabled(first)
+    selected = reader.is_element_selected(first)
+```
+
+## Screen State Verification
+
+```python
+from desktop_automation_perception import (
+    PyAutoGUIScreenshotBackend,
+    ScreenCheckType,
+    ScreenStateVerifier,
+    ScreenVerificationCheck,
+)
+
+verifier = ScreenStateVerifier(
+    ocr_extractor=ocr,
+    template_matcher=matcher,
+    window_manager=manager,
+    accessibility_reader=reader,
+    screenshot_backend=PyAutoGUIScreenshotBackend(),
+)
+
+result = verifier.verify(
+    [
+        ScreenVerificationCheck(
+            check_id="window",
+            check_type=ScreenCheckType.ACTIVE_WINDOW,
+            window_title="Notepad",
+        ),
+        ScreenVerificationCheck(
+            check_id="ready-text",
+            check_type=ScreenCheckType.TEXT_PRESENT,
+            target_text="Continue",
+        ),
+    ]
+)
+```
+
+## Structured Data Extraction
+
+```python
+from desktop_automation_perception import (
+    AIInterfaceElementSelector,
+    PaginationConfiguration,
+    StructuredDataExtractionConfiguration,
+    StructuredDataExtractionMode,
+    StructuredDataExtractor,
+    StructuredDataFieldSchema,
+    StructuredDataFieldType,
+    StructuredDataSchema,
+)
+
+extractor = StructuredDataExtractor(
+    accessibility_reader=reader,
+    ocr_extractor=ocr,
+    input_runner=simulator,
+)
+
+result = extractor.extract(
+    StructuredDataExtractionConfiguration(
+        mode=StructuredDataExtractionMode.TABLE,
+        schema=StructuredDataSchema(
+            schema_name="people",
+            fields=[
+                StructuredDataFieldSchema(field_name="name"),
+                StructuredDataFieldSchema(field_name="age", field_type=StructuredDataFieldType.INTEGER),
+            ],
+        ),
+        table_selector=AIInterfaceElementSelector(bounds=(50, 100, 1200, 900)),
+        pagination=PaginationConfiguration(
+            next_page_selector=AIInterfaceElementSelector(name="Next", role="button"),
+            max_pages=5,
+        ),
+    )
+)
+```
+
+## Workflow Audit Logging
+
+```python
+from desktop_automation_perception import WorkflowAuditLogger, WorkflowAuditQuery, WorkflowAuditOutcome
+
+audit = WorkflowAuditLogger(storage_path="artifacts/workflow_audit.jsonl")
+
+audit.log_action(
+    workflow_id="workflow-123",
+    step_name="submit_prompt",
+    action_type="type_text",
+    target_element="Chat input",
+    input_data={"prompt": "hello", "password": "secret"},
+    output_data={"status": "submitted"},
+    duration_seconds=1.2,
+    success=True,
+)
+
+failed = audit.query_logs(
+    WorkflowAuditQuery(
+        workflow_id="workflow-123",
+        outcome=WorkflowAuditOutcome.FAILURE,
+    )
+)
+
+audit.export_json("artifacts/workflow_audit.json")
+audit.export_csv("artifacts/workflow_audit.csv")
+```
+
+## Performance Metrics Collection
+
+```python
+from desktop_automation_perception import PerformanceMetricsCollector
+
+metrics = PerformanceMetricsCollector(storage_path="artifacts/performance_metrics.json")
+
+metrics.record_step_execution(
+    workflow_id="workflow-123",
+    step_name="submit_prompt",
+    execution_time_seconds=1.4,
+)
+metrics.record_retry(
+    workflow_id="workflow-123",
+    step_name="submit_prompt",
+    retry_count=1,
+)
+metrics.record_workflow_completion(
+    workflow_id="workflow-123",
+    succeeded=True,
+    step_count=4,
+)
+metrics.record_dlq_depth(depth=2)
+metrics.record_session(session_id="session-1", application_name="Chat App")
+
+snapshot = metrics.generate_snapshot(window_seconds=3600).snapshot
+endpoint_text = metrics.render_metrics_endpoint(window_seconds=3600).endpoint_payload
+```
+
+## Workflow Report Generation
+
+```python
+from desktop_automation_perception import WorkflowReportGenerator
+
+generator = WorkflowReportGenerator()
+
+result = generator.export_report(
+    output_path="artifacts/workflow_report.txt",
+    workflow_id="workflow-123",
+    workflow_name="Nightly Prompt Workflow",
+    audit_entries=audit_entries,
+    retry_summaries=retry_summaries,
+    anomalies=anomaly_records,
+    failure_records=failure_records,
+    dlq_items=dlq_items,
+)
+```
+
+## Data Export Pipeline
+
+```python
+from desktop_automation_perception import (
+    DataExportDestination,
+    DataExportDestinationType,
+    DataExportFileFormat,
+    DataExportPipeline,
+    StructuredDataFieldSchema,
+    StructuredDataFieldType,
+    StructuredDataSchema,
+)
+
+pipeline = DataExportPipeline(
+    schema=StructuredDataSchema(
+        schema_name="people",
+        fields=[
+            StructuredDataFieldSchema(field_name="name", field_type=StructuredDataFieldType.STRING, required=True),
+            StructuredDataFieldSchema(field_name="age", field_type=StructuredDataFieldType.INTEGER, required=True),
+        ],
+    ),
+    destinations=[
+        DataExportDestination(
+            destination_type=DataExportDestinationType.FILE,
+            destination_name="people-json",
+            file_path="artifacts/people.json",
+            file_format=DataExportFileFormat.JSON,
+        ),
+    ],
+    log_storage_path="artifacts/data_export_log.jsonl",
+)
+
+pipeline.buffer_records(extraction_result.records)
+result = pipeline.flush(workflow_id="workflow-123")
+```
+
+## Screen Change Detection
+
+```python
+from desktop_automation_perception import (
+    PILDifferenceBackend,
+    PyAutoGUIScreenCaptureBackend,
+    ScreenChangeDetectionMonitor,
+)
+
+monitor = ScreenChangeDetectionMonitor(
+    capture_backend=PyAutoGUIScreenCaptureBackend(),
+    difference_backend=PILDifferenceBackend(),
+)
+
+result = monitor.wait_for_change(
+    region_of_interest=(100, 100, 1200, 800),
+    change_threshold=0.12,
+    timeout_seconds=5.0,
+    polling_interval_seconds=0.25,
+    screenshot_path="change.png",
+)
+```
+
+## Account Registry
+
+```python
+from desktop_automation_perception import AccountRecord, AccountRegistry
+
+registry = AccountRegistry(storage_path="data/accounts.json")
+
+registry.upsert_account(
+    AccountRecord(
+        name="primary-workspace",
+        credential_reference="vault://accounts/workspace-primary",
+        account_type="workspace",
+        application="https://example.com",
+        health_score=0.97,
+    )
+)
+
+registry.set_account_active("primary-workspace", True)
+registry.update_last_used("primary-workspace")
+registry.log_account_usage("primary-workspace", "login", "Used for dashboard automation")
+accounts = registry.list_accounts(active_only=True)
+```
+
+## Credential Vault
+
+```python
+from datetime import datetime, timedelta, timezone
+
+from desktop_automation_perception import CredentialKind, CredentialVault
+
+vault = CredentialVault(storage_path="data/credentials.json")
+
+vault.store_credential(
+    account_identifier="primary-workspace",
+    kind=CredentialKind.TOKEN,
+    value="token-value",
+    expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+)
+
+token = vault.retrieve_credential("primary-workspace", CredentialKind.TOKEN)
+history = vault.get_access_log("primary-workspace")
+```
+
+## Browser Profile Switching
+
+```python
+from desktop_automation_perception import BrowserProfileSwitcher, SubprocessBrowserLauncher
+
+switcher = BrowserProfileSwitcher(
+    storage_path="data/browser_profiles.json",
+    launcher=SubprocessBrowserLauncher(),
+    account_verifier=lambda account_name, profile_directory: True,
+)
+
+switcher.create_profile(
+    account_name="primary-workspace",
+    profile_directory="profiles/primary-workspace",
+    browser_executable="C:/Program Files/Google/Chrome/Application/chrome.exe",
+    application="https://example.com",
+)
+
+switcher.launch_profile("primary-workspace")
+switcher.switch_profile("primary-workspace")
+```
+
+## Session State Tracking
+
+```python
+from desktop_automation_perception import (
+    ScreenCheckType,
+    ScreenVerificationCheck,
+    SessionStateTracker,
+)
+
+tracker = SessionStateTracker(
+    storage_path="data/session_state.json",
+    verifier=verifier,
+    reauthenticate_callback=lambda: True,
+)
+
+result = tracker.validate_session_before_high_risk_operation(
+    post_login_checks=[
+        ScreenVerificationCheck(
+            check_id="home",
+            check_type=ScreenCheckType.TEXT_PRESENT,
+            target_text="Dashboard",
+        )
+    ],
+    login_page_checks=[
+        ScreenVerificationCheck(
+            check_id="login",
+            check_type=ScreenCheckType.TEXT_PRESENT,
+            target_text="Sign in",
+        )
+    ],
+)
+```
+
+## Account Rotation Orchestration
+
+```python
+from datetime import timedelta
+
+from desktop_automation_perception import (
+    AccountExecutionMode,
+    AccountRotationOrchestrator,
+    RotationTask,
+)
+
+orchestrator = AccountRotationOrchestrator(
+    storage_path="data/account_rotation.json",
+    account_registry=registry,
+    task_executor=lambda task, account_name: True,
+)
+
+result = orchestrator.execute(
+    [
+        RotationTask(task_id="t1", required_account="primary-workspace"),
+        RotationTask(task_id="t2", required_account="backup-workspace"),
+        RotationTask(task_id="t3", required_account="primary-workspace"),
+    ],
+    mode=AccountExecutionMode.SEQUENTIAL,
+    minimum_reuse_interval=timedelta(minutes=5),
+)
+```
+
+## Prompt Template Management
+
+```python
+from desktop_automation_perception import PromptTemplateManager
+
+manager = PromptTemplateManager(storage_path="data/prompt_templates.json")
+
+manager.upsert_template(
+    name="status-update",
+    description="Generates a status update prompt",
+    body="Summarize the status for ${project_name} using ${tone} tone.",
+    target_context="project-dashboard",
+)
+
+rendered = manager.render_template(
+    "status-update",
+    {"project_name": "OmniReach", "tone": "concise"},
+)
+```
+
+## Target Application Prompt Injection
+
+```python
+from desktop_automation_perception import (
+    LineEndingStyle,
+    PromptInjectionMethod,
+    PromptInjectionTarget,
+    TargetApplicationPromptInjector,
+)
+
+injector = TargetApplicationPromptInjector(
+    input_runner=input_simulator,
+    clipboard_manager=clipboard_manager,
+    accessibility_reader=accessibility_reader,
+    ocr_extractor=ocr_extractor,
+    window_manager=window_manager,
+)
+
+result = injector.inject_prompt(
+    prompt="Line one\nLine two",
+    target=PromptInjectionTarget(
+        window_title="Prompt App",
+        element_name="Prompt",
+        element_role="edit",
+    ),
+    method=PromptInjectionMethod.CLIPBOARD,
+    line_endings=LineEndingStyle.LF,
+)
+```
+
+## AI Interface Navigation
+
+```python
+from desktop_automation_perception import (
+    AIInterfaceConfiguration,
+    AIInterfaceElementSelector,
+    AIInterfaceNavigator,
+    AIInterfaceSubmitMode,
+    PromptInjectionMethod,
+)
+
+navigator = AIInterfaceNavigator(
+    prompt_injector=injector,
+    input_runner=input_simulator,
+    screenshot_backend=screenshot_backend,
+    accessibility_reader=accessibility_reader,
+    ocr_extractor=ocr_extractor,
+    template_matcher=matcher,
+    window_manager=window_manager,
+)
+
+result = navigator.navigate(
+    prompt="Summarize the latest deployment logs.",
+    interface=AIInterfaceConfiguration(
+        interface_name="chatgpt",
+        input_selector=AIInterfaceElementSelector(
+            name="Message",
+            role="edit",
+            window_title="ChatGPT",
+            process_name="chrome.exe",
+        ),
+        submit_mode=AIInterfaceSubmitMode.AUTO,
+        submit_button_selector=AIInterfaceElementSelector(name="Send", role="button"),
+        response_selector=AIInterfaceElementSelector(name="Conversation", role="document"),
+        streaming_indicator_selectors=[
+            AIInterfaceElementSelector(name="Stop generating", role="button")
+        ],
+        error_dialog_selectors=[
+            AIInterfaceElementSelector(name="Something went wrong", role="dialog")
+        ],
+        session_timeout_selectors=[
+            AIInterfaceElementSelector(name="Sign in", role="dialog")
+        ],
+    ),
+    injection_method=PromptInjectionMethod.CLIPBOARD,
+)
+```
+
+## Multi-Step Prompt Pipeline Runner
+
+```python
+from desktop_automation_perception import (
+    PipelineResponseAction,
+    PromptPipelineRunner,
+    PromptPipelineStep,
+)
+
+runner = PromptPipelineRunner(
+    template_manager=prompt_template_manager,
+    navigator=navigator,
+    review_callback=lambda request: review_result,
+)
+
+result = runner.run(
+    [
+        PromptPipelineStep(
+            step_id="research",
+            interface=chatgpt_interface,
+            template_name="collect-facts",
+            template_variables={"topic": "robotics"},
+            expected_response_pattern=r".+",
+            output_variable_name="research_notes",
+        ),
+        PromptPipelineStep(
+            step_id="summary",
+            interface=claude_interface,
+            template_name="write-summary",
+            template_variables={"audience": "executive"},
+            response_action=PipelineResponseAction.STORE_AS,
+            output_variable_name="final_summary",
+            allow_human_review=True,
+        ),
+    ],
+    initial_variables={"operator": "primary"},
+)
+```
+
+## Response Extractor And Parser
+
+```python
+from desktop_automation_perception import (
+    ResponseExtractionConfiguration,
+    ResponseExtractorParser,
+    ResponseProcessingMode,
+    ResponseValidationMode,
+)
+
+extractor = ResponseExtractorParser(
+    screenshot_backend=screenshot_backend,
+    accessibility_reader=accessibility_reader,
+    ocr_extractor=ocr_extractor,
+    template_matcher=matcher,
+    navigator=navigator,
+)
+
+result = extractor.extract_response(
+    configuration=ResponseExtractionConfiguration(
+        interface_name="chatgpt",
+        response_selector=AIInterfaceElementSelector(name="Conversation", role="document"),
+        processing_modes=(
+            ResponseProcessingMode.STRIP_FORMATTING,
+            ResponseProcessingMode.EXTRACT_JSON_BLOCK,
+        ),
+        validation_mode=ResponseValidationMode.JSON_SCHEMA_LITE,
+        expected_schema={"status": "string", "summary": "string"},
+        retry_on_validation_failure=True,
+        max_retry_attempts=1,
+    ),
+    interface=chatgpt_interface,
+    prompt="Return deployment status as JSON.",
+)
+```
+
+## Application Launcher
+
+```python
+from desktop_automation_perception import (
+    AIInterfaceElementSelector,
+    ApplicationLaunchMode,
+    ApplicationLaunchRequest,
+    ApplicationLauncher,
+    ApplicationRegistry,
+    ApplicationStartupSignature,
+    KnownApplicationRecord,
+    SubprocessApplicationLauncherBackend,
+)
+
+registry = ApplicationRegistry(storage_path="data/applications.json")
+registry.upsert_application(
+    KnownApplicationRecord(
+        name="chatgpt-desktop",
+        launch_mode=ApplicationLaunchMode.EXECUTABLE,
+        executable_path="C:/Program Files/ChatGPT/ChatGPT.exe",
+        default_arguments=("--profile", "work"),
+        startup_signature=ApplicationStartupSignature(
+            window_title="ChatGPT",
+            process_name="ChatGPT.exe",
+            element_selector=AIInterfaceElementSelector(name="Message", role="edit"),
+        ),
+    )
+)
+
+launcher = ApplicationLauncher(
+    registry=registry,
+    backend=SubprocessApplicationLauncherBackend(),
+    window_manager=window_manager,
+    accessibility_reader=accessibility_reader,
+    ocr_extractor=ocr_extractor,
+    template_matcher=matcher,
+    screenshot_backend=screenshot_backend,
+)
+
+result = launcher.launch(
+    ApplicationLaunchRequest(
+        application_name="chatgpt-desktop",
+        launch_mode=ApplicationLaunchMode.EXECUTABLE,
+        arguments=("--workspace", "ops"),
+        timeout_seconds=20.0,
+        retry_attempts=2,
+    )
+)
+```
+
+## Navigation Step Sequencer
+
+```python
+from desktop_automation_perception import (
+    NavigationSequenceMode,
+    NavigationStep,
+    NavigationStepActionType,
+    NavigationStepSequencer,
+    ScreenCheckType,
+    ScreenVerificationCheck,
+)
+
+sequencer = NavigationStepSequencer(
+    input_runner=input_simulator,
+    verifier=screen_verifier,
+    launcher=application_launcher,
+)
+
+result = sequencer.run(
+    [
+        NavigationStep(
+            step_id="open-app",
+            action_type=NavigationStepActionType.NAVIGATE,
+            target_description="Open chat workspace",
+            input_data={"launch_request": launch_request},
+            expected_post_action_state=[
+                ScreenVerificationCheck(
+                    check_id="chat-ready",
+                    check_type=ScreenCheckType.TEXT_PRESENT,
+                    target_text="Message",
+                )
+            ],
+        ),
+        NavigationStep(
+            step_id="click-input",
+            action_type=NavigationStepActionType.CLICK,
+            target_description="Prompt input field",
+            input_data={"element_bounds": (900, 720, 1500, 820)},
+        ),
+        NavigationStep(
+            step_id="wait-stream",
+            action_type=NavigationStepActionType.WAIT,
+            target_description="Wait for UI settle",
+            input_data={"seconds": 1.0},
+            optional=True,
+        ),
+    ],
+    mode=NavigationSequenceMode.STRICT,
+)
+```
+
+## Menu And Dialog Navigator
+
+```python
+from desktop_automation_perception import (
+    AIInterfaceElementSelector,
+    DialogHandlingRequest,
+    DialogResponse,
+    MenuDialogNavigator,
+    MenuNavigationRequest,
+    UnexpectedDialogPolicy,
+)
+
+navigator = MenuDialogNavigator(
+    input_runner=input_simulator,
+    screenshot_backend=screenshot_backend,
+    accessibility_reader=accessibility_reader,
+    ocr_extractor=ocr_extractor,
+    template_matcher=matcher,
+    window_manager=window_manager,
+)
+
+menu_result = navigator.select_menu_item(
+    MenuNavigationRequest(
+        menu_label="File",
+        menu_selector=AIInterfaceElementSelector(name="File", role="menu item"),
+        custom_menu_selector=AIInterfaceElementSelector(name="File", role="button"),
+    )
+)
+
+dialog_result = navigator.handle_dialog(
+    DialogHandlingRequest(
+        dialog_selector=AIInterfaceElementSelector(name="Confirm Save", role="dialog"),
+        response=DialogResponse.ACCEPT,
+    )
+)
+
+unexpected = navigator.handle_unexpected_dialogs(
+    dialog_selectors=[AIInterfaceElementSelector(name="Unsaved Changes", role="dialog")],
+    policy=UnexpectedDialogPolicy(default_response=DialogResponse.CANCEL),
+)
+```
+
+## Form Automation Module
+
+```python
+from desktop_automation_perception import (
+    FormAutomationModule,
+    FormFieldType,
+    FormFieldValue,
+)
+
+form = FormAutomationModule(
+    input_runner=input_simulator,
+    accessibility_reader=accessibility_reader,
+    ocr_extractor=ocr_extractor,
+    window_manager=window_manager,
+)
+
+result = form.fill_form(
+    [
+        FormFieldValue(label="First Name", value="Avery", field_type=FormFieldType.TEXT),
+        FormFieldValue(label="Country", value="Canada", field_type=FormFieldType.DROPDOWN),
+        FormFieldValue(label="Subscribe", value=True, field_type=FormFieldType.CHECKBOX),
+        FormFieldValue(label="Start Date", value="2026-04-08", field_type=FormFieldType.DATE),
+    ]
+)
+```
+
+## Multi-Application Workflow Coordinator
+
+```python
+from desktop_automation_perception import (
+    MultiApplicationWorkflowCoordinator,
+    WorkflowDataExchangeMode,
+    WorkflowExchangeRequest,
+    WorkflowStep,
+)
+
+coordinator = MultiApplicationWorkflowCoordinator(
+    launcher=application_launcher,
+    window_manager=window_manager,
+    clipboard_manager=clipboard_manager,
+    dry_run=False,
+)
+
+result = coordinator.run(
+    [
+        WorkflowStep(
+            step_id="draft",
+            application_name="Writer",
+            launch_request=writer_launch_request,
+            required_window_title="Writer",
+            outgoing_exchange=WorkflowExchangeRequest(
+                mode=WorkflowDataExchangeMode.CLIPBOARD,
+                data_key="draft_text",
+                value="Quarterly update",
+            ),
+        ),
+        WorkflowStep(
+            step_id="paste",
+            application_name="Sheets",
+            launch_request=sheets_launch_request,
+            required_window_title="Sheets",
+            incoming_exchange=WorkflowExchangeRequest(
+                mode=WorkflowDataExchangeMode.CLIPBOARD,
+                data_key="draft_text",
+            ),
+        ),
+    ]
+)
+```
+
+## Exponential Backoff Retry Engine
+
+```python
+from desktop_automation_perception import (
+    ExponentialBackoffRetryEngine,
+    RetryConfiguration,
+    RetryDisposition,
+    RetryExceptionRule,
+    RetryExhaustedError,
+)
+
+engine = ExponentialBackoffRetryEngine()
+
+try:
+    result = engine.run(
+        fragile_action,
+        configuration=RetryConfiguration(
+            max_retry_count=4,
+            initial_delay_seconds=0.5,
+            backoff_multiplier=2.0,
+            max_delay_seconds=8.0,
+            exception_rules=[
+                RetryExceptionRule("TimeoutError", RetryDisposition.RETRY),
+                RetryExceptionRule("ValueError", RetryDisposition.FAIL),
+            ],
+        ),
+    )
+except RetryExhaustedError as exc:
+    failure = exc.failure
+    print(failure.attempts, failure.final_exception_type, failure.final_exception_message)
+```
+
+## Checkpoint Manager
+
+```python
+from desktop_automation_perception import (
+    CheckpointManager,
+    CheckpointResumePolicy,
+)
+
+manager = CheckpointManager(storage_path="data/workflow_checkpoints.json")
+
+manager.save_checkpoint(
+    workflow_id="ops-workflow",
+    step_index=3,
+    workflow_context=context,
+    account_context={"account": "primary"},
+    collected_data=context.shared_data,
+    step_outcomes=step_results,
+)
+
+restore = manager.restore_or_restart(
+    workflow_id="ops-workflow",
+    policy=CheckpointResumePolicy.AUTO_RESUME,
+)
+
+if restore.succeeded and restore.checkpoint is not None:
+    context = restore.checkpoint.workflow_context
+```
+
+## Pre-Condition And Post-Condition Validator
+
+```python
+from desktop_automation_perception import (
+    ConditionDescription,
+    PrePostConditionValidator,
+    RetryConfiguration,
+    ScreenCheckType,
+    ScreenVerificationCheck,
+)
+
+validator = PrePostConditionValidator(
+    verifier=screen_verifier,
+    retry_engine=retry_engine,
+)
+
+condition = ConditionDescription(
+    condition_id="chat-ready",
+    description="Message input must be visible",
+    checks=[
+        ScreenVerificationCheck(
+            check_id="message",
+            check_type=ScreenCheckType.TEXT_PRESENT,
+            target_text="Message",
+        )
+    ],
+)
+
+pre = validator.validate_pre_condition(condition)
+post = validator.validate_post_condition(
+    condition,
+    retry_configuration=RetryConfiguration(max_retry_count=2),
+    escalate_on_failure=True,
+)
+```
+
+## Idempotency Guard
+
+```python
+from desktop_automation_perception import IdempotencyGuard
+
+guard = IdempotencyGuard(storage_path="data/idempotency.json")
+
+result = guard.run_once(
+    action_id="submit-final-report",
+    action=lambda: {"status": "submitted", "ticket": "RPT-42"},
+)
+
+guard.reset_action("submit-final-report")
+```
+
+## Dead Letter Queue Handler
+
+```python
+from desktop_automation_perception import DeadLetterQueueHandler
+
+dlq = DeadLetterQueueHandler(
+    storage_path="data/dlq.json",
+    alert_threshold=5,
+    alert_callback=lambda depth: print(f"DLQ depth is {depth}"),
+)
+
+dlq.enqueue(
+    action_type="submit-report",
+    inputs={"workspace": "ops"},
+    retry_failure=failure_result,
+)
+
+items = dlq.inspect().items
+dlq.export_report("data/dlq-report.json")
+```
+
+## Error Classifier
+
+```python
+from desktop_automation_perception import ErrorClassifier
+
+classifier = ErrorClassifier(
+    storage_path="data/error-classifications.json",
+    screenshot_backend=screenshot_backend,
+)
+
+result = classifier.classify(RuntimeError("Session expired, please sign in"))
+
+print(result.category, result.recovery_strategy, result.record.screenshot_path)
+```
+
+## Self-Healing Recovery Module
+
+```python
+from desktop_automation_perception import (
+    ScreenCheckType,
+    ScreenVerificationCheck,
+    SelfHealingRecoveryModule,
+    SelfHealingRecoveryRequest,
+)
+
+recovery = SelfHealingRecoveryModule(
+    classifier=error_classifier,
+    verifier=screen_verifier,
+    screenshot_backend=screenshot_backend,
+    input_runner=input_simulator,
+    refresh_callback=lambda: window_manager.focus_window(title="Chat App"),
+    reauthenticate_callback=reauthenticate_session,
+    dismiss_dialog_callback=dismiss_dialogs,
+)
+
+result = recovery.recover(
+    SelfHealingRecoveryRequest(
+        error=RuntimeError("Application not responding"),
+        target_checks=[
+            ScreenVerificationCheck(
+                check_id="ready",
+                check_type=ScreenCheckType.TEXT_PRESENT,
+                target_text="Message",
+            )
+        ],
+    ),
+    retry_step=lambda: sequencer.replay_step(failed_step),
+)
+```
+
+## Anomaly Detector
+
+```python
+from desktop_automation_perception import AnomalyDetector, ResourceUsageSnapshot
+
+detector = AnomalyDetector(
+    storage_path="data/anomalies.json",
+    alert_callback=lambda anomaly: print(anomaly.category, anomaly.detail),
+)
+
+detector.record_step_execution(step_id="submit", execution_time_seconds=1.2)
+detector.record_step_failure(step_id="submit", application_name="Chat App", reason="Prompt submission failed")
+detector.detect_ui_structure_change(
+    step_id="chat-layout",
+    application_name="Chat App",
+    structure_signature="window:1|buttons:3|inputs:1",
+)
+detector.detect_resource_exhaustion(
+    resource_usage=ResourceUsageSnapshot(cpu_percent=92.0, memory_percent=88.0),
+)
+```
+
+## Screenshot-On-Failure Recorder
+
+```python
+from desktop_automation_perception import ScreenshotOnFailureRecorder
+
+recorder = ScreenshotOnFailureRecorder(
+    archive_path="data/failure_archive.json",
+    artifact_directory="data/failure_artifacts",
+    screenshot_backend=screenshot_backend,
+    accessibility_reader=accessibility_reader,
+)
+
+result = recorder.record_failure(
+    workflow_id="ops-workflow",
+    step_name="submit-prompt",
+    error=RuntimeError("Prompt submission failed"),
+    recent_actions=input_result.logs,
+    application_name="Chat App",
+)
+```
+
+## Watchdog Timer
+
+```python
+from desktop_automation_perception import ResourceUsageSnapshot, WatchdogTimer
+
+watchdog = WatchdogTimer(
+    storage_path="data/watchdog_events.json",
+    workflow_id="ops-workflow",
+    heartbeat_timeout_seconds=30.0,
+    monitoring_interval_seconds=5.0,
+    screenshot_backend=screenshot_backend,
+    graceful_termination_callback=terminate_pipeline,
+    oversight_callback=notify_oversight_system,
+    resource_probe=lambda: ResourceUsageSnapshot(cpu_percent=42.0, memory_percent=58.0),
+)
+
+watchdog.start()
+watchdog.heartbeat()
+```
+
+## Workflow Skill Store
+
+```python
+from desktop_automation_perception import WorkflowSkillStep, WorkflowSkillStore
+
+store = WorkflowSkillStore(storage_path="data/workflow_skills.json")
+
+store.record_successful_workflow(
+    workflow_name="Invoice Workflow",
+    description="Process vendor invoices from email",
+    steps=[
+        WorkflowSkillStep("open-mail", {"folder": "Invoices"}),
+        WorkflowSkillStep("extract-fields", {"engine": "ocr"}),
+    ],
+    execution_time_seconds=14.2,
+    contextual_notes="Works best when the mailbox is already filtered.",
+    task_description="Read invoice emails and extract payment details.",
+)
+
+matches = store.search_skills("Process a new vendor invoice from email").matches
+```
+
+## Episodic Memory Logger
+
+```python
+from desktop_automation_perception import EpisodicMemoryLogger
+
+memory = EpisodicMemoryLogger(storage_path="data/episodic_memory.json")
+
+memory.log_episode(
+    task_description="Submit a weekly operations report in ChatGPT.",
+    task_type="report_submission",
+    applications=["ChatGPT"],
+    steps_executed=[
+        {"step_name": "open-chat"},
+        {"step_name": "submit-prompt"},
+    ],
+    outcomes=["report drafted", "report submitted"],
+    recovery_actions_taken=["wait for loading"],
+    total_duration_seconds=13.4,
+    succeeded=True,
+)
+
+matches = memory.retrieve_relevant_episodes("Submit a weekly operations report").matches
+```
+
+## Action History Analyzer
+
+```python
+from desktop_automation_perception import ActionHistoryAnalyzer
+
+analyzer = ActionHistoryAnalyzer()
+
+report = analyzer.analyze(
+    action_logs=input_result.logs,
+    navigation_outcomes=sequence_result.outcomes,
+    prompt_step_logs=pipeline_result.logs,
+    retry_failures=[failure_result],
+    retry_step_types=["click"],
+).report
+
+print(report.optimization_hints)
+```
+
+## Prompt Performance Tracker
+
+```python
+from desktop_automation_perception import PromptPerformanceTracker
+
+tracker = PromptPerformanceTracker(storage_path="data/prompt_performance.json")
+
+tracker.record_prompt_submission(
+    template_name="summary-template",
+    template_version=3,
+    variables={"topic": "robotics"},
+    response_text='{"summary":"ok"}',
+    expected_format_met=True,
+    execution_time_seconds=1.4,
+    succeeded=True,
+)
+
+report = tracker.generate_report().report
+print(report.most_reliable_templates, report.least_reliable_templates)
+```
+
+## Self-Critique And Improvement Loop
+
+```python
+from desktop_automation_perception import SelfCritiqueImprovementLoop
+
+loop = SelfCritiqueImprovementLoop(
+    storage_path="data/improvement_proposals.json",
+    human_review_callback=lambda proposal: True,
+    apply_callback=lambda proposal: print("Applying", proposal.target_identifier),
+)
+
+result = loop.review_failures(
+    failure_records=failure_archive_records,
+    prompt_performance_records=prompt_performance_records,
+    require_human_review=True,
+)
+
+loop.record_improvement_outcome(
+    proposal_id=result.proposal.proposal_id,
+    succeeded=True,
+)
+```
+
+## Orchestrator Agent Core
+
+```python
+from desktop_automation_perception import OrchestratorAgentCore
+
+agent = OrchestratorAgentCore(fallback_module="human_review")
+plan = agent.create_plan(
+    "Launch ChatGPT, then submit a summary prompt, then verify the response format."
+)
+
+result = agent.execute_plan(
+    plan,
+    executor=lambda subtask, outputs: {
+        f"{subtask.subtask_id}_result": f"completed:{subtask.responsible_module}"
+    },
+)
+```
+
+## Specialist Agent Router
+
+```python
+from desktop_automation_perception import OrchestratorSubtask, SpecialistAgentRouter
+
+router = SpecialistAgentRouter(
+    storage_path="data/routing_decisions.json",
+    escalation_target="orchestrator",
+)
+
+router.register_agent(
+    agent_name="chat-agent",
+    capabilities=["ai_interface_navigator", "prompt"],
+    module_reference="ai_interface_navigator",
+)
+
+result = router.route_subtask(
+    OrchestratorSubtask(
+        subtask_id="subtask-1",
+        description="Submit a prompt in ChatGPT",
+        responsible_module="ai_interface_navigator",
+        expected_outputs=["subtask-1_result"],
+    )
+)
+```
+
+## Agent Message Bus
+
+```python
+from desktop_automation_perception import AgentMessageBus
+
+bus = AgentMessageBus(storage_path="data/agent_bus.json")
+
+bus.subscribe(agent_id="planner", topic="workflow.status")
+bus.publish(
+    sender_id="orchestrator",
+    topic="workflow.status",
+    message_type="subtask_completed",
+    payload={"subtask_id": "subtask-1"},
+    correlation_id="workflow-42",
+)
+bus.send_direct(
+    sender_id="planner",
+    recipient_id="reviewer",
+    message_type="review_request",
+    payload={"proposal_id": "prop-1"},
+    correlation_id="workflow-42",
+)
+```
+
+## Shared State Manager
+
+```python
+from desktop_automation_perception import SharedStateConflictPolicy, SharedStateManager
+
+state = SharedStateManager(
+    storage_path="data/shared_state.json",
+    conflict_policy=SharedStateConflictPolicy.PRIORITY_BASED,
+    agent_priorities={"orchestrator": 10, "executor": 5},
+)
+
+state.define_field(
+    field_name="current_application",
+    field_type="string",
+    initial_value="ChatGPT",
+    read_agents=["orchestrator", "executor"],
+    write_agents=["executor"],
+)
+
+state.write_field(agent_id="executor", field_name="current_application", value="Sheets")
+snapshot = state.snapshot().snapshot
+```
+
+## Agent Handoff Protocol
+
+```python
+from desktop_automation_perception import AgentHandoffContext, AgentHandoffProtocol, AgentHandoffReason
+
+handoff = AgentHandoffProtocol(
+    storage_path="data/agent_handoffs.json",
+    message_bus=bus,
+)
+
+result = handoff.create_handoff(
+    sender_agent_id="planner",
+    receiver_agent_id="executor",
+    context=AgentHandoffContext(
+        current_step="submit-prompt",
+        collected_data={"prompt": "Summarize the logs"},
+        plan_description="launch -> submit prompt -> validate response",
+    ),
+    reason=AgentHandoffReason.CAPABILITY_MISMATCH,
+    special_instructions="Take over prompt submission and preserve the current variables.",
+    overlap_seconds=120,
+)
+```

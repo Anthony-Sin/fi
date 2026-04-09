@@ -1,0 +1,19 @@
+{
+  "build_id": "build-output",
+  "parameters": {},
+  "reason": null,
+  "skipped_steps": [
+    "optional-step"
+  ],
+  "status": "success",
+  "step_outcomes": [
+    {
+      "application_name": "erp",
+      "reason": "skipped by pipeline",
+      "status": "skipped",
+      "step_id": "optional-step"
+    }
+  ],
+  "workflow_id": "wf-output",
+  "workflow_name": "Output Reporter"
+}
