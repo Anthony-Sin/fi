@@ -1,5 +1,5 @@
-from desktop_automation_perception.input_simulator import SafeInputSimulator
-from desktop_automation_perception.models import InputAction, InputActionType, PacingContext, ScreenBounds
+from desktop_automation_agent.input_simulator import SafeInputSimulator
+from desktop_automation_agent.models import InputAction, InputActionType, PacingContext, ScreenBounds
 
 
 class FakeBackend:

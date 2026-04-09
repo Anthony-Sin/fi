@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from desktop_automation_perception.idempotency_guard import IdempotencyGuard
+from desktop_automation_agent.idempotency_guard import IdempotencyGuard
 
 
 def test_idempotency_guard_executes_action_once_and_caches_result(tmp_path):

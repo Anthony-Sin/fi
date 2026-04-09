@@ -1,6 +1,6 @@
-from desktop_automation_perception.models import ThemeDetectionResult, TemplateSearchRequest, UITheme
-from desktop_automation_perception.template_image_matcher import TemplateImageMatcher
-from desktop_automation_perception.theme_adaptation import ThemeAdaptationModule
+from desktop_automation_agent.models import ThemeDetectionResult, TemplateSearchRequest, UITheme
+from desktop_automation_agent.template_image_matcher import TemplateImageMatcher
+from desktop_automation_agent.theme_adaptation import ThemeAdaptationModule
 
 
 class FakeOSThemeBackend:

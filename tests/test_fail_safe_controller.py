@@ -1,16 +1,16 @@
 from pathlib import Path
 
-from desktop_automation_perception.fail_safe_controller import FailSafeController
-from desktop_automation_perception.models import (
+from desktop_automation_agent.fail_safe_controller import FailSafeController
+from desktop_automation_agent.models import (
     AutomationTask,
     FailSafeTriggerType,
     TaskPriority,
     WorkflowContext,
     WorkflowStepResult,
 )
-from desktop_automation_perception.task_queue_manager import TaskQueueManager
-from desktop_automation_perception.checkpoint_manager import CheckpointManager
-from desktop_automation_perception.workflow_audit_logger import WorkflowAuditLogger
+from desktop_automation_agent.task_queue_manager import TaskQueueManager
+from desktop_automation_agent.checkpoint_manager import CheckpointManager
+from desktop_automation_agent.workflow_audit_logger import WorkflowAuditLogger
 
 
 class FakeScreenshotBackend:

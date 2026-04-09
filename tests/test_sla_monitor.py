@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from desktop_automation_perception.models import NotificationEventType
-from desktop_automation_perception.observability import SLAMonitor
+from desktop_automation_agent.models import NotificationEventType
+from desktop_automation_agent.observability import SLAMonitor
 
 
 class FakeNotificationDispatcher:

@@ -2,13 +2,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import json
 
-from desktop_automation_perception.agents import ParallelWorkerPool
-from desktop_automation_perception.models import (
+from desktop_automation_agent.agents import ParallelWorkerPool
+from desktop_automation_agent.models import (
     AutomationTask,
     TaskPriority,
     WorkerExecutionMode,
 )
-from desktop_automation_perception.sandbox_isolation_manager import SandboxIsolationManager
+from desktop_automation_agent.sandbox_isolation_manager import SandboxIsolationManager
 
 
 class FakeRuntime:

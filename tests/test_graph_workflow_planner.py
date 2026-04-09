@@ -1,5 +1,5 @@
-from desktop_automation_perception.graph_workflow_planner import GraphBasedWorkflowPlanner
-from desktop_automation_perception.models import (
+from desktop_automation_agent.graph_workflow_planner import GraphBasedWorkflowPlanner
+from desktop_automation_agent.models import (
     WorkflowGraphCondition,
     WorkflowGraphConditionOperator,
     WorkflowGraphDefinition,

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from desktop_automation_perception.prompt_performance_tracker import PromptPerformanceTracker
+from desktop_automation_agent.prompt_performance_tracker import PromptPerformanceTracker
 
 
 def test_prompt_performance_tracker_records_prompt_submission(tmp_path):

@@ -1,14 +1,14 @@
 from datetime import datetime
 from pathlib import Path
 
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     ApprovalDecision,
     ApprovalGateAction,
     ApprovalGateResult,
     ApprovalRiskLevel,
     ConfidenceRoutingDisposition,
 )
-from desktop_automation_perception.resilience import ConfidenceBasedAutoRouting
+from desktop_automation_agent.resilience import ConfidenceBasedAutoRouting
 
 
 class FakeApprovalGate:

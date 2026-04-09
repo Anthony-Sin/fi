@@ -1,4 +1,4 @@
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     AIInterfaceConfiguration,
     AIInterfaceElementSelector,
     AccessibilityElement,
@@ -9,7 +9,7 @@ from desktop_automation_perception.models import (
     ResponseValidationMode,
     SelectorStrategy,
 )
-from desktop_automation_perception.response_extractor_parser import ResponseExtractorParser
+from desktop_automation_agent.response_extractor_parser import ResponseExtractorParser
 
 
 class FakeAccessibilityReader:

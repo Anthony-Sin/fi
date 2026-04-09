@@ -1,5 +1,5 @@
-from desktop_automation_perception.menu_dialog_navigator import MenuDialogNavigator
-from desktop_automation_perception.models import (
+from desktop_automation_agent.menu_dialog_navigator import MenuDialogNavigator
+from desktop_automation_agent.models import (
     AIInterfaceElementSelector,
     AccessibilityElement,
     AccessibilityElementState,

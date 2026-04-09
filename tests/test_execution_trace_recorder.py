@@ -5,7 +5,7 @@ import zipfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     ActionLogEntry,
     ApprovalGateAction,
     ApprovalRequest,
@@ -24,7 +24,7 @@ from desktop_automation_perception.models import (
     WorkflowContext,
     WorkflowStepResult,
 )
-from desktop_automation_perception.observability import ExecutionTraceRecorder
+from desktop_automation_agent.observability import ExecutionTraceRecorder
 
 
 class FakeScreenshotBackend:

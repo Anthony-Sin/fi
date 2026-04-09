@@ -1,15 +1,15 @@
 from datetime import datetime
 from pathlib import Path
 
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     EscalationResolution,
     EscalationResponse,
     EscalationTriggerType,
     NotificationChannel,
     NotificationChannelType,
 )
-from desktop_automation_perception.notification_dispatcher import NotificationDispatcher
-from desktop_automation_perception.resilience import EscalationManager
+from desktop_automation_agent.notification_dispatcher import NotificationDispatcher
+from desktop_automation_agent.resilience import EscalationManager
 
 
 class FakeTransport:

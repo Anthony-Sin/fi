@@ -1,14 +1,14 @@
 from datetime import datetime, timezone
 
-from desktop_automation_perception.graph_workflow_planner import GraphBasedWorkflowPlanner
-from desktop_automation_perception.models import (
+from desktop_automation_agent.graph_workflow_planner import GraphBasedWorkflowPlanner
+from desktop_automation_agent.models import (
     WorkflowGraphDefinition,
     WorkflowGraphEdge,
     WorkflowGraphNode,
     WorkflowTemplateCompositionComponent,
     WorkflowTemplateParameter,
 )
-from desktop_automation_perception.workflow_template_library import WorkflowTemplateLibrary
+from desktop_automation_agent.workflow_template_library import WorkflowTemplateLibrary
 
 
 def _template_graph(workflow_id, node_suffix, label):

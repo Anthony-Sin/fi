@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from desktop_automation_perception.resilience import SensitiveDataProtector
-from desktop_automation_perception.models import (
+from desktop_automation_agent.resilience import SensitiveDataProtector
+from desktop_automation_agent.models import (
     ActionRetryRateSummary,
     AnomalyCategory,
     AnomalyRecord,
@@ -12,7 +12,7 @@ from desktop_automation_perception.models import (
     WorkflowAuditLogEntry,
     WorkflowAuditOutcome,
 )
-from desktop_automation_perception.report_generator import WorkflowReportGenerator
+from desktop_automation_agent.report_generator import WorkflowReportGenerator
 
 
 def make_entry(timestamp, workflow_id, step_name, action_type, success, duration, *, target=None, output=None):

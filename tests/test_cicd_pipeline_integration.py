@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from desktop_automation_perception.automation import CICDPipelineIntegrationModule
-from desktop_automation_perception.models import (
+from desktop_automation_agent.automation import CICDPipelineIntegrationModule
+from desktop_automation_agent.models import (
     CICDReportMode,
     CICDTriggerPayload,
     CICDWorkflowSpecification,

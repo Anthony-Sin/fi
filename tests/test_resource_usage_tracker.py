@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from desktop_automation_perception.observability import ResourceUsageTracker
+from desktop_automation_agent.observability import ResourceUsageTracker
 
 
 def test_resource_usage_tracker_aggregates_per_workflow_type_and_account(tmp_path):

@@ -1,4 +1,4 @@
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     ApplicationLaunchMode,
     ApplicationLaunchRequest,
     NavigationSequenceMode,
@@ -7,8 +7,8 @@ from desktop_automation_perception.models import (
     ScreenCheckType,
     ScreenVerificationCheck,
 )
-from desktop_automation_perception.navigation_step_sequencer import NavigationStepSequencer
-from desktop_automation_perception.resilience import AntiLoopDetector
+from desktop_automation_agent.navigation_step_sequencer import NavigationStepSequencer
+from desktop_automation_agent.resilience import AntiLoopDetector
 
 
 class FakeInputRunner:

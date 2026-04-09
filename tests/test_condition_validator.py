@@ -1,5 +1,5 @@
-from desktop_automation_perception.condition_validator import PrePostConditionValidator
-from desktop_automation_perception.models import (
+from desktop_automation_agent.condition_validator import PrePostConditionValidator
+from desktop_automation_agent.models import (
     ConditionDescription,
     RetryConfiguration,
     RetryDisposition,
@@ -9,7 +9,7 @@ from desktop_automation_perception.models import (
     ValidationDisposition,
     ValidationPhase,
 )
-from desktop_automation_perception.retry_engine import ExponentialBackoffRetryEngine
+from desktop_automation_agent.retry_engine import ExponentialBackoffRetryEngine
 
 
 class FakeVerifier:

@@ -1,14 +1,14 @@
 import json
 from pathlib import Path
 
-from desktop_automation_perception.agents import TaskQueueManager
-from desktop_automation_perception.automation import (
+from desktop_automation_agent.agents import TaskQueueManager
+from desktop_automation_agent.automation import (
     ExternalWorkflowTriggerReceiver,
     TriggerAuthenticationConfiguration,
 )
-from desktop_automation_perception.models import RateLimitRule, RateLimitScope, RateLimitWindow
-from desktop_automation_perception.rate_limiter import RateLimiter
-from desktop_automation_perception.workflow_audit_logger import WorkflowAuditLogger
+from desktop_automation_agent.models import RateLimitRule, RateLimitScope, RateLimitWindow
+from desktop_automation_agent.rate_limiter import RateLimiter
+from desktop_automation_agent.workflow_audit_logger import WorkflowAuditLogger
 
 
 def make_payload(**overrides):

@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from desktop_automation_perception.automation import WorkflowScheduler
-from desktop_automation_perception.models import (
+from desktop_automation_agent.automation import WorkflowScheduler
+from desktop_automation_agent.models import (
     MissedExecutionPolicy,
     WorkflowEventTrigger,
     WorkflowEventType,

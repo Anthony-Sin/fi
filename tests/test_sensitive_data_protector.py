@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from desktop_automation_perception.resilience import SensitiveDataProtector
+from desktop_automation_agent.resilience import SensitiveDataProtector
 
 
 def test_sensitive_data_protector_sanitizes_payloads_and_audits_access(tmp_path):

@@ -2,9 +2,9 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from desktop_automation_perception.resilience import SensitiveDataProtector
-from desktop_automation_perception.models import WorkflowAuditOutcome, WorkflowAuditQuery
-from desktop_automation_perception.workflow_audit_logger import WorkflowAuditLogger
+from desktop_automation_agent.resilience import SensitiveDataProtector
+from desktop_automation_agent.models import WorkflowAuditOutcome, WorkflowAuditQuery
+from desktop_automation_agent.workflow_audit_logger import WorkflowAuditLogger
 
 
 def test_workflow_audit_logger_appends_and_sanitizes_credentials(tmp_path):

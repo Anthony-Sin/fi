@@ -1,8 +1,8 @@
 from datetime import datetime
 
-from desktop_automation_perception.automation import RESTAPIActionExecutor
-from desktop_automation_perception.allowlist_enforcer import ActionAllowlistEnforcer
-from desktop_automation_perception.models import (
+from desktop_automation_agent.automation import RESTAPIActionExecutor
+from desktop_automation_agent.allowlist_enforcer import ActionAllowlistEnforcer
+from desktop_automation_agent.models import (
     APIAuthType,
     RESTAPIMethod,
     RESTAPIRequest,

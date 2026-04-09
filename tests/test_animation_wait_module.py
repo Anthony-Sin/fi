@@ -1,5 +1,5 @@
-from desktop_automation_perception.animation_wait_module import AnimationTransitionWaitModule
-from desktop_automation_perception.models import AnimationCompletionSignal, AnimationWaitRequest
+from desktop_automation_agent.animation_wait_module import AnimationTransitionWaitModule
+from desktop_automation_agent.models import AnimationCompletionSignal, AnimationWaitRequest
 
 
 class FakeCaptureBackend:

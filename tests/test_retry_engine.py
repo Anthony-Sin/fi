@@ -1,9 +1,9 @@
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     RetryConfiguration,
     RetryDisposition,
     RetryExceptionRule,
 )
-from desktop_automation_perception.retry_engine import (
+from desktop_automation_agent.retry_engine import (
     ExponentialBackoffRetryEngine,
     RetryExhaustedError,
 )

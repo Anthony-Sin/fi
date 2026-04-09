@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from desktop_automation_perception.episodic_memory_logger import EpisodicMemoryLogger
+from desktop_automation_agent.episodic_memory_logger import EpisodicMemoryLogger
 
 
 def test_episodic_memory_logger_records_episode(tmp_path):

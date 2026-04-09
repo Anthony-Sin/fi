@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from desktop_automation_perception.models import OrchestratorSubtask, OrchestratorSubtaskStatus
-from desktop_automation_perception.specialist_agent_router import SpecialistAgentRouter
+from desktop_automation_agent.models import OrchestratorSubtask, OrchestratorSubtaskStatus
+from desktop_automation_agent.specialist_agent_router import SpecialistAgentRouter
 
 
 def make_subtask(description, responsible_module="ai_interface_navigator", subtask_id="subtask-1"):

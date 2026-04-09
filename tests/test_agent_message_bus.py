@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from desktop_automation_perception.models import BusRecipientKind
-from desktop_automation_perception.agent_message_bus import AgentMessageBus
+from desktop_automation_agent.models import BusRecipientKind
+from desktop_automation_agent.agent_message_bus import AgentMessageBus
 
 
 def test_agent_message_bus_supports_topic_publish_subscribe(tmp_path):

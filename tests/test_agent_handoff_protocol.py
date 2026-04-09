@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from desktop_automation_perception.agent_handoff_protocol import AgentHandoffProtocol
-from desktop_automation_perception.agent_message_bus import AgentMessageBus
-from desktop_automation_perception.models import AgentHandoffContext, AgentHandoffReason
+from desktop_automation_agent.agent_handoff_protocol import AgentHandoffProtocol
+from desktop_automation_agent.agent_message_bus import AgentMessageBus
+from desktop_automation_agent.models import AgentHandoffContext, AgentHandoffReason
 
 
 def test_agent_handoff_protocol_records_context_reason_and_instructions(tmp_path):

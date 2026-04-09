@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     ApprovalDecision,
     ApprovalGateAction,
     ApprovalResponse,
@@ -10,8 +10,8 @@ from desktop_automation_perception.models import (
     NotificationChannel,
     NotificationChannelType,
 )
-from desktop_automation_perception.notification_dispatcher import NotificationDispatcher
-from desktop_automation_perception.resilience import ApprovalGateModule
+from desktop_automation_agent.notification_dispatcher import NotificationDispatcher
+from desktop_automation_agent.resilience import ApprovalGateModule
 
 
 class FakeTransport:

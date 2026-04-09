@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from desktop_automation_perception.models import ResourceUsageSnapshot, WatchdogEventType
-from desktop_automation_perception.watchdog_timer import WatchdogTimer
+from desktop_automation_agent.models import ResourceUsageSnapshot, WatchdogEventType
+from desktop_automation_agent.watchdog_timer import WatchdogTimer
 
 
 class FakeScreenshotBackend:

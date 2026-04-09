@@ -20,7 +20,7 @@ The primary way to interact with the system is through the `DesktopAutomationAge
 ### Quick Start
 
 ```python
-from desktop_automation_perception import DesktopAutomationAgent
+from desktop_automation_agent import DesktopAutomationAgent
 
 # Initialize the agent
 agent = DesktopAutomationAgent()
@@ -39,7 +39,7 @@ if result.succeeded:
 Launch the priority overlay to talk to the agent directly:
 
 ```python
-from desktop_automation_perception import DesktopAutomationAgent
+from desktop_automation_agent import DesktopAutomationAgent
 
 agent = DesktopAutomationAgent()
 agent.run_interactive()  # Opens the always-on-top dashboard

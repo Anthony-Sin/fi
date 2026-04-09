@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock
-from desktop_automation_perception.agents.desktop_automation_agent import DesktopAutomationAgent
-from desktop_automation_perception.models import OrchestratorSubtaskStatus
+from desktop_automation_agent.agents.desktop_automation_agent import DesktopAutomationAgent
+from desktop_automation_agent.models import OrchestratorSubtaskStatus
 
 
 def test_desktop_automation_agent_workflow_orchestration():

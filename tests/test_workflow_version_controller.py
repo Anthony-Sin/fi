@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
-from desktop_automation_perception.graph_workflow_planner import GraphBasedWorkflowPlanner
-from desktop_automation_perception.models import (
+from desktop_automation_agent.graph_workflow_planner import GraphBasedWorkflowPlanner
+from desktop_automation_agent.models import (
     WorkflowAuditOutcome,
     WorkflowAuditQuery,
     WorkflowEventType,
@@ -15,9 +15,9 @@ from desktop_automation_perception.models import (
     WorkflowTriggerType,
     WorkflowVersionTag,
 )
-from desktop_automation_perception.workflow_version_controller import WorkflowVersionController
-from desktop_automation_perception.workflow_audit_logger import WorkflowAuditLogger
-from desktop_automation_perception.workflow_scheduler import WorkflowScheduler
+from desktop_automation_agent.workflow_version_controller import WorkflowVersionController
+from desktop_automation_agent.workflow_audit_logger import WorkflowAuditLogger
+from desktop_automation_agent.workflow_scheduler import WorkflowScheduler
 
 
 def _graph(workflow_id, *, node_suffix="a", edge_suffix="1"):

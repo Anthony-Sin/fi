@@ -1,19 +1,19 @@
 import json
 from datetime import datetime, timedelta, timezone
 
-from desktop_automation_perception.account_rotation_orchestrator import AccountRotationOrchestrator
-from desktop_automation_perception.account_registry import AccountRegistry
-from desktop_automation_perception.accessibility_tree_reader import AccessibilityTreeReader
-from desktop_automation_perception.allowlist_enforcer import ActionAllowlistEnforcer
-from desktop_automation_perception.browser_profile_switcher import BrowserProfileSwitcher
-from desktop_automation_perception.change_detection_monitor import ScreenChangeDetectionMonitor
-from desktop_automation_perception.clipboard import ClipboardManager
-from desktop_automation_perception.context import CaptureContext
-from desktop_automation_perception.credential_vault import CredentialVault
-from desktop_automation_perception.engine import DesktopPerceptionEngine
-from desktop_automation_perception.input_simulator import SafeInputSimulator, StaticScreenInspector
-from desktop_automation_perception.locator import MultiStrategyElementLocator
-from desktop_automation_perception.models import (
+from desktop_automation_agent.account_rotation_orchestrator import AccountRotationOrchestrator
+from desktop_automation_agent.account_registry import AccountRegistry
+from desktop_automation_agent.accessibility_tree_reader import AccessibilityTreeReader
+from desktop_automation_agent.allowlist_enforcer import ActionAllowlistEnforcer
+from desktop_automation_agent.browser_profile_switcher import BrowserProfileSwitcher
+from desktop_automation_agent.change_detection_monitor import ScreenChangeDetectionMonitor
+from desktop_automation_agent.clipboard import ClipboardManager
+from desktop_automation_agent.context import CaptureContext
+from desktop_automation_agent.credential_vault import CredentialVault
+from desktop_automation_agent.engine import DesktopPerceptionEngine
+from desktop_automation_agent.input_simulator import SafeInputSimulator, StaticScreenInspector
+from desktop_automation_agent.locator import MultiStrategyElementLocator
+from desktop_automation_agent.models import (
     AccessibilityElement,
     AccessibilityElementState,
     AccessibilityTree,
@@ -50,28 +50,28 @@ from desktop_automation_perception.models import (
     WindowZoneType,
     WindowState,
 )
-from desktop_automation_perception.ocr_extractor import OCRExtractor
-from desktop_automation_perception.prompt_template_manager import PromptTemplateManager
-from desktop_automation_perception.resilience import SensitiveDataProtector
-from desktop_automation_perception.screen_state_verifier import ScreenStateVerifier
-from desktop_automation_perception.session_state_tracker import SessionStateTracker
-from desktop_automation_perception.target_application_prompt_injector import (
+from desktop_automation_agent.ocr_extractor import OCRExtractor
+from desktop_automation_agent.prompt_template_manager import PromptTemplateManager
+from desktop_automation_agent.resilience import SensitiveDataProtector
+from desktop_automation_agent.screen_state_verifier import ScreenStateVerifier
+from desktop_automation_agent.session_state_tracker import SessionStateTracker
+from desktop_automation_agent.target_application_prompt_injector import (
     TargetApplicationPromptInjector,
 )
-from desktop_automation_perception.providers import (
+from desktop_automation_agent.providers import (
     AIVisionProvider,
     AccessibilityProvider,
     OCRProvider,
     TemplateMatchingProvider,
 )
-from desktop_automation_perception.template_image_matcher import TemplateImageMatcher
-from desktop_automation_perception.resolution_adaptive_coordinate_manager import (
+from desktop_automation_agent.template_image_matcher import TemplateImageMatcher
+from desktop_automation_agent.resolution_adaptive_coordinate_manager import (
     ResolutionAdaptiveCoordinateManager,
 )
-from desktop_automation_perception.dynamic_region_of_interest_calculator import (
+from desktop_automation_agent.dynamic_region_of_interest_calculator import (
     DynamicRegionOfInterestCalculator,
 )
-from desktop_automation_perception.window_manager import (
+from desktop_automation_agent.window_manager import (
     DesktopWindowManager,
     SW_MAXIMIZE,
     SW_MINIMIZE,

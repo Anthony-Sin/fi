@@ -1,5 +1,5 @@
-from desktop_automation_perception.automation import COMAutomationConnector
-from desktop_automation_perception.models import FormFieldValue, RetryConfiguration
+from desktop_automation_agent.automation import COMAutomationConnector
+from desktop_automation_agent.models import FormFieldValue, RetryConfiguration
 
 
 class com_error(Exception):

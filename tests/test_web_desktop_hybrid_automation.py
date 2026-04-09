@@ -1,5 +1,5 @@
-from desktop_automation_perception.automation import WebDesktopHybridAutomation
-from desktop_automation_perception.models import ScreenVerificationResult, WindowContext, WindowOperationResult
+from desktop_automation_agent.automation import WebDesktopHybridAutomation
+from desktop_automation_agent.models import ScreenVerificationResult, WindowContext, WindowOperationResult
 
 
 class FakeBrowserLauncher:

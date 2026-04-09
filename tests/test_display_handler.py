@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from desktop_automation_perception.display_handler import MultiMonitorDisplayHandler
-from desktop_automation_perception.input_simulator import SafeInputSimulator, StaticScreenInspector
-from desktop_automation_perception.locator import MultiStrategyElementLocator
-from desktop_automation_perception.models import (
+from desktop_automation_agent.display_handler import MultiMonitorDisplayHandler
+from desktop_automation_agent.input_simulator import SafeInputSimulator, StaticScreenInspector
+from desktop_automation_agent.locator import MultiStrategyElementLocator
+from desktop_automation_agent.models import (
     DesktopState,
     InputAction,
     InputActionType,

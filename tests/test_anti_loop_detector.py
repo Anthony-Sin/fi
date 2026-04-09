@@ -1,12 +1,12 @@
 from pathlib import Path
 
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     AntiLoopTriggerType,
     EscalationResolution,
     EscalationResponse,
     EscalationTriggerType,
 )
-from desktop_automation_perception.resilience import AntiLoopDetector, EscalationManager
+from desktop_automation_agent.resilience import AntiLoopDetector, EscalationManager
 
 
 class FakeAuditLogger:

@@ -1,5 +1,5 @@
-from desktop_automation_perception.conditional_branch_evaluator import ConditionalBranchEvaluator
-from desktop_automation_perception.models import (
+from desktop_automation_agent.conditional_branch_evaluator import ConditionalBranchEvaluator
+from desktop_automation_agent.models import (
     BranchComparisonOperator,
     BranchConditionSpecification,
     BranchConditionType,

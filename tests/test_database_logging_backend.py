@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from desktop_automation_perception.database_logging_backend import (
+from desktop_automation_agent.database_logging_backend import (
     DatabaseLoggingBackend,
     SQLiteConnectionPool,
 )
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     DatabaseCheckpointRecord,
     DatabaseErrorRecord,
     DatabaseExtractedDataRecord,

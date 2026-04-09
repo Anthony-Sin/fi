@@ -1,1 +1,1 @@
-desktop_automation_perception
+desktop_automation_agent

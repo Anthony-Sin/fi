@@ -2,8 +2,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from desktop_automation_perception.models import SandboxIsolationMode, WorkerExecutionMode, WorkerSessionContext
-from desktop_automation_perception.sandbox_isolation_manager import SandboxIsolationManager
+from desktop_automation_agent.models import SandboxIsolationMode, WorkerExecutionMode, WorkerSessionContext
+from desktop_automation_agent.sandbox_isolation_manager import SandboxIsolationManager
 
 
 class FakeSandboxRuntime:

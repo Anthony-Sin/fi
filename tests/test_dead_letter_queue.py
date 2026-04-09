@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from desktop_automation_perception.dead_letter_queue import DeadLetterQueueHandler
-from desktop_automation_perception.models import (
+from desktop_automation_agent.dead_letter_queue import DeadLetterQueueHandler
+from desktop_automation_agent.models import (
     RetryAttemptLog,
     RetryDisposition,
     RetryFailureResult,

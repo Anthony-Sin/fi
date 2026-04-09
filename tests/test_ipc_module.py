@@ -1,5 +1,5 @@
-from desktop_automation_perception.agents import IPCModule
-from desktop_automation_perception.models import IPCChannelType, IPCMessage, RetryConfiguration
+from desktop_automation_agent.agents import IPCModule
+from desktop_automation_agent.models import IPCChannelType, IPCMessage, RetryConfiguration
 
 
 class FakeIPCBackend:

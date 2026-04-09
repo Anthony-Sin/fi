@@ -1,5 +1,5 @@
-from desktop_automation_perception.inter_step_pacing_controller import InterStepPacingController
-from desktop_automation_perception.models import (
+from desktop_automation_agent.inter_step_pacing_controller import InterStepPacingController
+from desktop_automation_agent.models import (
     InputAction,
     InputActionType,
     PacingContext,

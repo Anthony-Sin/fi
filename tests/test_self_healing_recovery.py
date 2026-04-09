@@ -1,12 +1,12 @@
-from desktop_automation_perception.error_classifier import ErrorClassifier
-from desktop_automation_perception.models import (
+from desktop_automation_agent.error_classifier import ErrorClassifier
+from desktop_automation_agent.models import (
     InputTarget,
     RecoveryStrategy,
     ScreenCheckType,
     ScreenVerificationCheck,
     SelfHealingRecoveryRequest,
 )
-from desktop_automation_perception.self_healing_recovery import SelfHealingRecoveryModule
+from desktop_automation_agent.self_healing_recovery import SelfHealingRecoveryModule
 
 
 class FakeScreenshotBackend:
