@@ -236,6 +236,10 @@ class HierarchicalTaskDecomposer:
         normalized = description.casefold()
         if any(token in normalized for token in ("launch", "open", "start app", "browser")):
             return "application_launcher"
+        if any(token in normalized for token in ("account", "login", "profile", "credential", "session")):
+            return "account_rotation_orchestrator"
+        if any(token in normalized for token in ("chat", "prompt", "ai", "llm", "assistant", "ask")):
+            return "ai_interface_navigator"
         if any(token in normalized for token in ("extract", "collect", "read", "capture")):
             return "structured_data_extractor"
         if any(token in normalized for token in ("fill", "enter", "submit", "form")):

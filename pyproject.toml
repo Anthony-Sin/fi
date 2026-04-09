@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "desktop-automation-perception"
+name = "desktop-automation-agent"
 version = "0.1.0"
-description = "Desktop environment perception component for OS-level automation."
+description = "Autonomous desktop agent for environment control, account switching, and multi-step workflows."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
