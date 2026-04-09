@@ -395,6 +395,15 @@
       "escalated": true,
       "reason": "No specialist agent matched subtask 'decomp-subtask-2'; escalated to orchestrator.",
       "timestamp": "2026-04-09T20:34:28.611798"
+    },
+    {
+      "subtask_id": "decomp-subtask-1",
+      "selected_agent": null,
+      "selected_module": null,
+      "matched_capability": null,
+      "escalated": true,
+      "reason": "No specialist agent matched subtask 'decomp-subtask-1'; escalated to orchestrator.",
+      "timestamp": "2026-04-09T20:48:52.797904"
     }
   ]
 }
