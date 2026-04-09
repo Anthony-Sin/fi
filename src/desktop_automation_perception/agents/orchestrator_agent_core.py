@@ -122,6 +122,8 @@ class OrchestratorAgentCore:
         normalized = segment.casefold()
         if any(token in normalized for token in ("launch", "open application", "start app", "open browser")):
             return "application_launcher"
+        if any(token in normalized for token in ("account", "login", "profile", "credential", "session")):
+            return "account_rotation_orchestrator"
         if any(token in normalized for token in ("chat", "prompt", "ai", "llm", "assistant")):
             return "ai_interface_navigator"
         if any(token in normalized for token in ("form", "field", "dropdown", "checkbox")):

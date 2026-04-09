@@ -1,5 +1,6 @@
 from .agent_handoff_protocol import AgentHandoffProtocol
 from .agent_message_bus import AgentMessageBus
+from .desktop_automation_agent import DesktopAutomationAgent
 from .hierarchical_task_decomposer import HierarchicalTaskDecomposer
 from .ipc_module import IPCModule
 from .orchestrator_agent_core import OrchestratorAgentCore
@@ -12,6 +13,7 @@ from .task_queue_manager import TaskQueueManager
 __all__ = [
     "AgentHandoffProtocol",
     "AgentMessageBus",
+    "DesktopAutomationAgent",
     "HierarchicalTaskDecomposer",
     "IPCModule",
     "OrchestratorAgentCore",

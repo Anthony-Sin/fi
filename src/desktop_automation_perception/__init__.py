@@ -17,6 +17,7 @@ from .accounts import (
 from .agents import (
     AgentHandoffProtocol,
     AgentMessageBus,
+    DesktopAutomationAgent,
     HierarchicalTaskDecomposer,
     IPCModule,
     OrchestratorAgentCore,
@@ -684,6 +685,7 @@ _LEGACY_MODULE_ALIASES = {
     "desktop_automation_perception.navigation_step_sequencer": ".automation.navigation_step_sequencer",
     "desktop_automation_perception.notification_dispatcher": ".observability.notification_dispatcher",
     "desktop_automation_perception.ocr_extractor": ".desktop.ocr_extractor",
+    "desktop_automation_perception.desktop_automation_agent": ".agents.desktop_automation_agent",
     "desktop_automation_perception.orchestrator_agent_core": ".agents.orchestrator_agent_core",
     "desktop_automation_perception.parallel_worker_pool": ".agents.parallel_worker_pool",
     "desktop_automation_perception.sandbox_isolation_manager": ".agents.sandbox_isolation_manager",
