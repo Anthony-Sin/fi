@@ -40,6 +40,7 @@ from .ai import (
     PromptPerformanceTracker,
     PromptPipelineRunner,
     PromptTemplateManager,
+    ResponseExtractorParser,
 )
 from .automation import (
     AutomationPluginLoader,
@@ -653,7 +654,6 @@ from .models import (
     WindowReference,
     WindowZone,
     WindowZoneType,
-    WindowState,
     WindowState
 )
 
@@ -1200,6 +1200,7 @@ __all__ = [
     "PromptPipelineStepLog",
     "PromptReadbackMethod",
     "PromptTemplatePerformanceSummary",
+    "ResponseExtractorParser",
     "TargetApplicationPromptInjector",
     "TriggerAuthenticationConfiguration",
     "WebDesktopHybridAutomation",
