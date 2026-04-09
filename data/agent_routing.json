@@ -398,6 +398,7 @@
     },
     {
       "subtask_id": "decomp-subtask-1",
+<<<<<<< HEAD
       "selected_agent": "account_rotation_orchestrator",
       "selected_module": "account_rotation_orchestrator",
       "matched_capability": "account_rotation_orchestrator",
@@ -434,10 +435,13 @@
     },
     {
       "subtask_id": "decomp-subtask-2",
+=======
+>>>>>>> 7b6381a (startt)
       "selected_agent": null,
       "selected_module": null,
       "matched_capability": null,
       "escalated": true,
+<<<<<<< HEAD
       "reason": "No specialist agent matched subtask 'decomp-subtask-2'; escalated to orchestrator.",
       "timestamp": "2026-04-09T21:08:19.703504"
     },
@@ -530,6 +534,10 @@
       "escalated": true,
       "reason": "No specialist agent matched subtask 'decomp-subtask-2'; escalated to orchestrator.",
       "timestamp": "2026-04-09T21:51:32.527221"
+=======
+      "reason": "No specialist agent matched subtask 'decomp-subtask-1'; escalated to orchestrator.",
+      "timestamp": "2026-04-09T20:48:52.797904"
+>>>>>>> 7b6381a (startt)
     }
   ]
 }
