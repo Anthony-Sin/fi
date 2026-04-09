@@ -1,14 +1,14 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     RateLimitRequest,
     RateLimitRule,
     RateLimitScope,
     RateLimitWindow,
     ThrottlingEventType,
 )
-from desktop_automation_perception.rate_limiter import RateLimiter
+from desktop_automation_agent.rate_limiter import RateLimiter
 
 
 def make_request(

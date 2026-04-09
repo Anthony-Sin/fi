@@ -1,6 +1,6 @@
-from desktop_automation_perception.application_launcher import ApplicationLauncher, ApplicationRegistry
-from desktop_automation_perception.allowlist_enforcer import ActionAllowlistEnforcer
-from desktop_automation_perception.models import (
+from desktop_automation_agent.application_launcher import ApplicationLauncher, ApplicationRegistry
+from desktop_automation_agent.allowlist_enforcer import ActionAllowlistEnforcer
+from desktop_automation_agent.models import (
     AIInterfaceElementSelector,
     AccessibilityElement,
     AccessibilityElementState,

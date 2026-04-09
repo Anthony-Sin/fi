@@ -1,11 +1,11 @@
 from PIL import Image
 
-from desktop_automation_perception.change_detection_monitor import (
+from desktop_automation_agent.change_detection_monitor import (
     PILDifferenceBackend,
     ScreenChangeDetectionMonitor,
 )
-from desktop_automation_perception.models import UIStateFingerprint, UILandmark, WindowContext
-from desktop_automation_perception.ui_state_fingerprinter import UIStateFingerprinter
+from desktop_automation_agent.models import UIStateFingerprint, UILandmark, WindowContext
+from desktop_automation_agent.ui_state_fingerprinter import UIStateFingerprinter
 
 
 class FakeCaptureBackend:

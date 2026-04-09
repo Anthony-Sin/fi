@@ -1,8 +1,8 @@
 from datetime import datetime
 from pathlib import Path
 
-from desktop_automation_perception.models import FailureArchiveRecord, PromptPerformanceRecord
-from desktop_automation_perception.self_critique_improvement_loop import SelfCritiqueImprovementLoop
+from desktop_automation_agent.models import FailureArchiveRecord, PromptPerformanceRecord
+from desktop_automation_agent.self_critique_improvement_loop import SelfCritiqueImprovementLoop
 
 
 def make_failure(record_id, workflow_id, step_name, message):

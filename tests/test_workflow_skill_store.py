@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from desktop_automation_perception.models import WorkflowSkillStep
-from desktop_automation_perception.workflow_skill_store import WorkflowSkillStore
+from desktop_automation_agent.models import WorkflowSkillStep
+from desktop_automation_agent.workflow_skill_store import WorkflowSkillStore
 
 
 def test_workflow_skill_store_records_successful_workflow(tmp_path):

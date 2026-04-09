@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from desktop_automation_perception.accounts import ExternalCredentialInjector
-from desktop_automation_perception.models import WorkflowContext
-from desktop_automation_perception.workflow_audit_logger import WorkflowAuditLogger
+from desktop_automation_agent.accounts import ExternalCredentialInjector
+from desktop_automation_agent.models import WorkflowContext
+from desktop_automation_agent.workflow_audit_logger import WorkflowAuditLogger
 
 
 class FakeVaultBackend:

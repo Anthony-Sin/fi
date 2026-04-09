@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from desktop_automation_perception.agents import TaskQueueManager
-from desktop_automation_perception.models import AutomationTask, TaskPriority
+from desktop_automation_agent.agents import TaskQueueManager
+from desktop_automation_agent.models import AutomationTask, TaskPriority
 
 
 def make_task(

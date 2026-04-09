@@ -4,7 +4,7 @@ import os
 import time
 from pathlib import Path
 
-from desktop_automation_perception.automation import AutomationPluginLoader, PluginActionRouter
+from desktop_automation_agent.automation import AutomationPluginLoader, PluginActionRouter
 
 
 def _write_plugin(path: Path, body: str) -> None:

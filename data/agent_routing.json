@@ -402,6 +402,12 @@
       "selected_module": null,
       "matched_capability": null,
       "escalated": true,
+      "selected_agent": null,
+      "selected_module": null,
+      "matched_capability": null,
+      "escalated": true,
+      "reason": "No specialist agent matched subtask 'decomp-subtask-1'; escalated to orchestrator.",
+      "timestamp": "2026-04-09T20:48:52.797904"
       "reason": "No specialist agent matched subtask 'decomp-subtask-1'; escalated to orchestrator.",
       "timestamp": "2026-04-09T20:48:52.797904"
     }

@@ -1,5 +1,5 @@
-from desktop_automation_perception.ai_interface_navigator import AIInterfaceNavigator
-from desktop_automation_perception.models import (
+from desktop_automation_agent.ai_interface_navigator import AIInterfaceNavigator
+from desktop_automation_agent.models import (
     AIInterfaceConfiguration,
     AIInterfaceElementSelector,
     AIInterfaceStatus,

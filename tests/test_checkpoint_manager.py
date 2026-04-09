@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from desktop_automation_perception.checkpoint_manager import CheckpointManager
-from desktop_automation_perception.models import (
+from desktop_automation_agent.checkpoint_manager import CheckpointManager
+from desktop_automation_agent.models import (
     CheckpointDecision,
     CheckpointResumePolicy,
     UIStateFingerprint,

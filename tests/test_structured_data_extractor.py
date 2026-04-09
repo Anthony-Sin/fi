@@ -1,4 +1,4 @@
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     AIInterfaceElementSelector,
     AccessibilityElement,
     AccessibilityElementState,
@@ -11,7 +11,7 @@ from desktop_automation_perception.models import (
     StructuredDataFieldType,
     StructuredDataSchema,
 )
-from desktop_automation_perception.structured_data_extractor import StructuredDataExtractor
+from desktop_automation_agent.structured_data_extractor import StructuredDataExtractor
 
 
 class FakeAccessibilityReader:

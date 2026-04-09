@@ -1,5 +1,5 @@
-from desktop_automation_perception.models import OrchestratorSubtaskResult, OrchestratorSubtaskStatus
-from desktop_automation_perception.orchestrator_agent_core import OrchestratorAgentCore
+from desktop_automation_agent.models import OrchestratorSubtaskResult, OrchestratorSubtaskStatus
+from desktop_automation_agent.orchestrator_agent_core import OrchestratorAgentCore
 
 
 def test_orchestrator_agent_decomposes_task_into_ordered_subtasks():

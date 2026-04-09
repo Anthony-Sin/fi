@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from desktop_automation_perception.models import SharedStateConflictPolicy
-from desktop_automation_perception.shared_state_manager import SharedStateManager
+from desktop_automation_agent.models import SharedStateConflictPolicy
+from desktop_automation_agent.shared_state_manager import SharedStateManager
 
 
 def test_shared_state_manager_supports_typed_fields_and_snapshot(tmp_path):

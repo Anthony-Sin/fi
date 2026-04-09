@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
-from desktop_automation_perception.desktop import ClipboardDataBridge
-from desktop_automation_perception.models import (
+from desktop_automation_agent.desktop import ClipboardDataBridge
+from desktop_automation_agent.models import (
     ClipboardBridgeFormat,
     ClipboardContent,
     ClipboardContentType,

@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 from pathlib import Path
 
-from desktop_automation_perception.accounts import AccountRegistry
-from desktop_automation_perception.agents import ParallelWorkerPool
-from desktop_automation_perception.load_balancer import MultiAccountLoadBalancer
-from desktop_automation_perception.models import (
+from desktop_automation_agent.accounts import AccountRegistry
+from desktop_automation_agent.agents import ParallelWorkerPool
+from desktop_automation_agent.load_balancer import MultiAccountLoadBalancer
+from desktop_automation_agent.models import (
     AccountRecord,
     AutomationTask,
     RateLimitRequest,
@@ -13,7 +13,7 @@ from desktop_automation_perception.models import (
     RateLimitWindow,
     TaskPriority,
 )
-from desktop_automation_perception.rate_limiter import RateLimiter
+from desktop_automation_agent.rate_limiter import RateLimiter
 
 
 class FakeRuntime:

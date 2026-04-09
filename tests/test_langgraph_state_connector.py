@@ -1,10 +1,10 @@
 from datetime import datetime
 from pathlib import Path
 
-from desktop_automation_perception.automation import LangGraphStateConnector
-from desktop_automation_perception.checkpoint_manager import CheckpointManager
-from desktop_automation_perception.context import CaptureContext
-from desktop_automation_perception.models import (
+from desktop_automation_agent.automation import LangGraphStateConnector
+from desktop_automation_agent.checkpoint_manager import CheckpointManager
+from desktop_automation_agent.context import CaptureContext
+from desktop_automation_agent.models import (
     DesktopState,
     LocatorResult,
     LocatorStrategy,

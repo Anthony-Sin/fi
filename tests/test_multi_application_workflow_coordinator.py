@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     ApplicationLaunchMode,
     ApplicationLaunchRequest,
     WorkflowContext,
@@ -8,10 +8,10 @@ from desktop_automation_perception.models import (
     WorkflowExchangeRequest,
     WorkflowStep,
 )
-from desktop_automation_perception.multi_application_workflow_coordinator import (
+from desktop_automation_agent.multi_application_workflow_coordinator import (
     MultiApplicationWorkflowCoordinator,
 )
-from desktop_automation_perception.resilience import AntiLoopDetector
+from desktop_automation_agent.resilience import AntiLoopDetector
 
 
 class FakeLauncher:

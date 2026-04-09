@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from desktop_automation_perception.knowledge import FeedbackLoopCollector, SelfCritiqueImprovementLoop
-from desktop_automation_perception.models import (
+from desktop_automation_agent.knowledge import FeedbackLoopCollector, SelfCritiqueImprovementLoop
+from desktop_automation_agent.models import (
     ApprovalDecision,
     ApprovalGateAction,
     ApprovalRequest,

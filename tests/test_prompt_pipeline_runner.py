@@ -1,4 +1,4 @@
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     AIInterfaceConfiguration,
     AIInterfaceElementSelector,
     AIInterfaceStatus,
@@ -7,7 +7,7 @@ from desktop_automation_perception.models import (
     PipelineStatus,
     PromptPipelineStep,
 )
-from desktop_automation_perception.prompt_pipeline_runner import PromptPipelineRunner
+from desktop_automation_agent.prompt_pipeline_runner import PromptPipelineRunner
 
 
 class FakeTemplateManager:

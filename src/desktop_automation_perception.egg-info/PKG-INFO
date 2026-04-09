@@ -22,16 +22,16 @@ Each perception result carries a confidence score and standardized metadata so i
 
 The package now exposes grouped domain entrypoints in addition to the backward-compatible root imports:
 
-- `desktop_automation_perception.desktop`
-- `desktop_automation_perception.ai`
-- `desktop_automation_perception.automation`
-- `desktop_automation_perception.accounts`
-- `desktop_automation_perception.agents`
-- `desktop_automation_perception.observability`
-- `desktop_automation_perception.resilience`
-- `desktop_automation_perception.knowledge`
+- `desktop_automation_agent.desktop`
+- `desktop_automation_agent.ai`
+- `desktop_automation_agent.automation`
+- `desktop_automation_agent.accounts`
+- `desktop_automation_agent.agents`
+- `desktop_automation_agent.observability`
+- `desktop_automation_agent.resilience`
+- `desktop_automation_agent.knowledge`
 
-A shared `desktop_automation_perception.contracts` module centralizes runtime dependency contracts so the implementation modules no longer carry repeated placeholder-style protocol stubs.
+A shared `desktop_automation_agent.contracts` module centralizes runtime dependency contracts so the implementation modules no longer carry repeated placeholder-style protocol stubs.
 
 ## Included
 
@@ -78,8 +78,8 @@ A shared `desktop_automation_perception.contracts` module centralizes runtime de
 ## Example
 
 ```python
-from desktop_automation_perception import DesktopPerceptionEngine
-from desktop_automation_perception.providers import (
+from desktop_automation_agent import DesktopPerceptionEngine
+from desktop_automation_agent.providers import (
     AccessibilityProvider,
     OCRProvider,
     TemplateMatchingProvider,
@@ -102,7 +102,7 @@ print(state.best_summary())
 ## Element Locator
 
 ```python
-from desktop_automation_perception import LocatorTarget, MultiStrategyElementLocator
+from desktop_automation_agent import LocatorTarget, MultiStrategyElementLocator
 
 locator = MultiStrategyElementLocator(confidence_threshold=0.8)
 result = locator.locate(
@@ -119,7 +119,7 @@ else:
 ## Safe Input Simulation
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     InputAction,
     InputActionType,
     InputTarget,
@@ -160,7 +160,7 @@ result = simulator.run(
 ## Window Management
 
 ```python
-from desktop_automation_perception import DesktopWindowManager
+from desktop_automation_agent import DesktopWindowManager
 
 manager = DesktopWindowManager(timeout_seconds=2.0, retry_count=8)
 
@@ -177,7 +177,7 @@ new_window = manager.wait_for_new_window()
 ## Clipboard Automation
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     ClipboardManager,
     ClipboardPasteMode,
     InputTarget,
@@ -206,7 +206,7 @@ verification = clipboard.paste_and_verify(
 ## Template Image Matching
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     OpenCVImageMatcherBackend,
     TemplateImageMatcher,
     TemplateSearchRequest,
@@ -242,7 +242,7 @@ reference = matcher.capture_reference_template(
 ## OCR Text Extraction
 
 ```python
-from desktop_automation_perception import OCRExtractor, TesseractOCRBackend
+from desktop_automation_agent import OCRExtractor, TesseractOCRBackend
 
 ocr = OCRExtractor(backend=TesseractOCRBackend())
 
@@ -263,7 +263,7 @@ match = ocr.find_text(
 ## Accessibility Tree Reading
 
 ```python
-from desktop_automation_perception import AccessibilityTreeReader
+from desktop_automation_agent import AccessibilityTreeReader
 
 reader = AccessibilityTreeReader()
 tree = reader.read_active_application_tree()
@@ -280,7 +280,7 @@ if buttons.matches:
 ## Screen State Verification
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     PyAutoGUIScreenshotBackend,
     ScreenCheckType,
     ScreenStateVerifier,
@@ -314,7 +314,7 @@ result = verifier.verify(
 ## Structured Data Extraction
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     AIInterfaceElementSelector,
     PaginationConfiguration,
     StructuredDataExtractionConfiguration,
@@ -353,7 +353,7 @@ result = extractor.extract(
 ## Workflow Audit Logging
 
 ```python
-from desktop_automation_perception import WorkflowAuditLogger, WorkflowAuditQuery, WorkflowAuditOutcome
+from desktop_automation_agent import WorkflowAuditLogger, WorkflowAuditQuery, WorkflowAuditOutcome
 
 audit = WorkflowAuditLogger(storage_path="artifacts/workflow_audit.jsonl")
 
@@ -382,7 +382,7 @@ audit.export_csv("artifacts/workflow_audit.csv")
 ## Performance Metrics Collection
 
 ```python
-from desktop_automation_perception import PerformanceMetricsCollector
+from desktop_automation_agent import PerformanceMetricsCollector
 
 metrics = PerformanceMetricsCollector(storage_path="artifacts/performance_metrics.json")
 
@@ -411,7 +411,7 @@ endpoint_text = metrics.render_metrics_endpoint(window_seconds=3600).endpoint_pa
 ## Workflow Report Generation
 
 ```python
-from desktop_automation_perception import WorkflowReportGenerator
+from desktop_automation_agent import WorkflowReportGenerator
 
 generator = WorkflowReportGenerator()
 
@@ -430,7 +430,7 @@ result = generator.export_report(
 ## Data Export Pipeline
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     DataExportDestination,
     DataExportDestinationType,
     DataExportFileFormat,
@@ -466,7 +466,7 @@ result = pipeline.flush(workflow_id="workflow-123")
 ## Screen Change Detection
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     PILDifferenceBackend,
     PyAutoGUIScreenCaptureBackend,
     ScreenChangeDetectionMonitor,
@@ -489,7 +489,7 @@ result = monitor.wait_for_change(
 ## Account Registry
 
 ```python
-from desktop_automation_perception import AccountRecord, AccountRegistry
+from desktop_automation_agent import AccountRecord, AccountRegistry
 
 registry = AccountRegistry(storage_path="data/accounts.json")
 
@@ -514,7 +514,7 @@ accounts = registry.list_accounts(active_only=True)
 ```python
 from datetime import datetime, timedelta, timezone
 
-from desktop_automation_perception import CredentialKind, CredentialVault
+from desktop_automation_agent import CredentialKind, CredentialVault
 
 vault = CredentialVault(storage_path="data/credentials.json")
 
@@ -532,7 +532,7 @@ history = vault.get_access_log("primary-workspace")
 ## Browser Profile Switching
 
 ```python
-from desktop_automation_perception import BrowserProfileSwitcher, SubprocessBrowserLauncher
+from desktop_automation_agent import BrowserProfileSwitcher, SubprocessBrowserLauncher
 
 switcher = BrowserProfileSwitcher(
     storage_path="data/browser_profiles.json",
@@ -554,7 +554,7 @@ switcher.switch_profile("primary-workspace")
 ## Session State Tracking
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     ScreenCheckType,
     ScreenVerificationCheck,
     SessionStateTracker,
@@ -589,7 +589,7 @@ result = tracker.validate_session_before_high_risk_operation(
 ```python
 from datetime import timedelta
 
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     AccountExecutionMode,
     AccountRotationOrchestrator,
     RotationTask,
@@ -615,7 +615,7 @@ result = orchestrator.execute(
 ## Prompt Template Management
 
 ```python
-from desktop_automation_perception import PromptTemplateManager
+from desktop_automation_agent import PromptTemplateManager
 
 manager = PromptTemplateManager(storage_path="data/prompt_templates.json")
 
@@ -635,7 +635,7 @@ rendered = manager.render_template(
 ## Target Application Prompt Injection
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     LineEndingStyle,
     PromptInjectionMethod,
     PromptInjectionTarget,
@@ -665,7 +665,7 @@ result = injector.inject_prompt(
 ## AI Interface Navigation
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     AIInterfaceConfiguration,
     AIInterfaceElementSelector,
     AIInterfaceNavigator,
@@ -713,7 +713,7 @@ result = navigator.navigate(
 ## Multi-Step Prompt Pipeline Runner
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     PipelineResponseAction,
     PromptPipelineRunner,
     PromptPipelineStep,
@@ -752,7 +752,7 @@ result = runner.run(
 ## Response Extractor And Parser
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     ResponseExtractionConfiguration,
     ResponseExtractorParser,
     ResponseProcessingMode,
@@ -788,7 +788,7 @@ result = extractor.extract_response(
 ## Application Launcher
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     AIInterfaceElementSelector,
     ApplicationLaunchMode,
     ApplicationLaunchRequest,
@@ -838,7 +838,7 @@ result = launcher.launch(
 ## Navigation Step Sequencer
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     NavigationSequenceMode,
     NavigationStep,
     NavigationStepActionType,
@@ -889,7 +889,7 @@ result = sequencer.run(
 ## Menu And Dialog Navigator
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     AIInterfaceElementSelector,
     DialogHandlingRequest,
     DialogResponse,
@@ -931,7 +931,7 @@ unexpected = navigator.handle_unexpected_dialogs(
 ## Form Automation Module
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     FormAutomationModule,
     FormFieldType,
     FormFieldValue,
@@ -957,7 +957,7 @@ result = form.fill_form(
 ## Multi-Application Workflow Coordinator
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     MultiApplicationWorkflowCoordinator,
     WorkflowDataExchangeMode,
     WorkflowExchangeRequest,
@@ -1001,7 +1001,7 @@ result = coordinator.run(
 ## Exponential Backoff Retry Engine
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     ExponentialBackoffRetryEngine,
     RetryConfiguration,
     RetryDisposition,
@@ -1033,7 +1033,7 @@ except RetryExhaustedError as exc:
 ## Checkpoint Manager
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     CheckpointManager,
     CheckpointResumePolicy,
 )
@@ -1061,7 +1061,7 @@ if restore.succeeded and restore.checkpoint is not None:
 ## Pre-Condition And Post-Condition Validator
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     ConditionDescription,
     PrePostConditionValidator,
     RetryConfiguration,
@@ -1097,7 +1097,7 @@ post = validator.validate_post_condition(
 ## Idempotency Guard
 
 ```python
-from desktop_automation_perception import IdempotencyGuard
+from desktop_automation_agent import IdempotencyGuard
 
 guard = IdempotencyGuard(storage_path="data/idempotency.json")
 
@@ -1112,7 +1112,7 @@ guard.reset_action("submit-final-report")
 ## Dead Letter Queue Handler
 
 ```python
-from desktop_automation_perception import DeadLetterQueueHandler
+from desktop_automation_agent import DeadLetterQueueHandler
 
 dlq = DeadLetterQueueHandler(
     storage_path="data/dlq.json",
@@ -1133,7 +1133,7 @@ dlq.export_report("data/dlq-report.json")
 ## Error Classifier
 
 ```python
-from desktop_automation_perception import ErrorClassifier
+from desktop_automation_agent import ErrorClassifier
 
 classifier = ErrorClassifier(
     storage_path="data/error-classifications.json",
@@ -1148,7 +1148,7 @@ print(result.category, result.recovery_strategy, result.record.screenshot_path)
 ## Self-Healing Recovery Module
 
 ```python
-from desktop_automation_perception import (
+from desktop_automation_agent import (
     ScreenCheckType,
     ScreenVerificationCheck,
     SelfHealingRecoveryModule,
@@ -1183,7 +1183,7 @@ result = recovery.recover(
 ## Anomaly Detector
 
 ```python
-from desktop_automation_perception import AnomalyDetector, ResourceUsageSnapshot
+from desktop_automation_agent import AnomalyDetector, ResourceUsageSnapshot
 
 detector = AnomalyDetector(
     storage_path="data/anomalies.json",
@@ -1205,7 +1205,7 @@ detector.detect_resource_exhaustion(
 ## Screenshot-On-Failure Recorder
 
 ```python
-from desktop_automation_perception import ScreenshotOnFailureRecorder
+from desktop_automation_agent import ScreenshotOnFailureRecorder
 
 recorder = ScreenshotOnFailureRecorder(
     archive_path="data/failure_archive.json",
@@ -1226,7 +1226,7 @@ result = recorder.record_failure(
 ## Watchdog Timer
 
 ```python
-from desktop_automation_perception import ResourceUsageSnapshot, WatchdogTimer
+from desktop_automation_agent import ResourceUsageSnapshot, WatchdogTimer
 
 watchdog = WatchdogTimer(
     storage_path="data/watchdog_events.json",
@@ -1246,7 +1246,7 @@ watchdog.heartbeat()
 ## Workflow Skill Store
 
 ```python
-from desktop_automation_perception import WorkflowSkillStep, WorkflowSkillStore
+from desktop_automation_agent import WorkflowSkillStep, WorkflowSkillStore
 
 store = WorkflowSkillStore(storage_path="data/workflow_skills.json")
 
@@ -1268,7 +1268,7 @@ matches = store.search_skills("Process a new vendor invoice from email").matches
 ## Episodic Memory Logger
 
 ```python
-from desktop_automation_perception import EpisodicMemoryLogger
+from desktop_automation_agent import EpisodicMemoryLogger
 
 memory = EpisodicMemoryLogger(storage_path="data/episodic_memory.json")
 
@@ -1292,7 +1292,7 @@ matches = memory.retrieve_relevant_episodes("Submit a weekly operations report")
 ## Action History Analyzer
 
 ```python
-from desktop_automation_perception import ActionHistoryAnalyzer
+from desktop_automation_agent import ActionHistoryAnalyzer
 
 analyzer = ActionHistoryAnalyzer()
 
@@ -1310,7 +1310,7 @@ print(report.optimization_hints)
 ## Prompt Performance Tracker
 
 ```python
-from desktop_automation_perception import PromptPerformanceTracker
+from desktop_automation_agent import PromptPerformanceTracker
 
 tracker = PromptPerformanceTracker(storage_path="data/prompt_performance.json")
 
@@ -1331,7 +1331,7 @@ print(report.most_reliable_templates, report.least_reliable_templates)
 ## Self-Critique And Improvement Loop
 
 ```python
-from desktop_automation_perception import SelfCritiqueImprovementLoop
+from desktop_automation_agent import SelfCritiqueImprovementLoop
 
 loop = SelfCritiqueImprovementLoop(
     storage_path="data/improvement_proposals.json",
@@ -1354,7 +1354,7 @@ loop.record_improvement_outcome(
 ## Orchestrator Agent Core
 
 ```python
-from desktop_automation_perception import OrchestratorAgentCore
+from desktop_automation_agent import OrchestratorAgentCore
 
 agent = OrchestratorAgentCore(fallback_module="human_review")
 plan = agent.create_plan(
@@ -1372,7 +1372,7 @@ result = agent.execute_plan(
 ## Specialist Agent Router
 
 ```python
-from desktop_automation_perception import OrchestratorSubtask, SpecialistAgentRouter
+from desktop_automation_agent import OrchestratorSubtask, SpecialistAgentRouter
 
 router = SpecialistAgentRouter(
     storage_path="data/routing_decisions.json",
@@ -1398,7 +1398,7 @@ result = router.route_subtask(
 ## Agent Message Bus
 
 ```python
-from desktop_automation_perception import AgentMessageBus
+from desktop_automation_agent import AgentMessageBus
 
 bus = AgentMessageBus(storage_path="data/agent_bus.json")
 
@@ -1422,7 +1422,7 @@ bus.send_direct(
 ## Shared State Manager
 
 ```python
-from desktop_automation_perception import SharedStateConflictPolicy, SharedStateManager
+from desktop_automation_agent import SharedStateConflictPolicy, SharedStateManager
 
 state = SharedStateManager(
     storage_path="data/shared_state.json",
@@ -1445,7 +1445,7 @@ snapshot = state.snapshot().snapshot
 ## Agent Handoff Protocol
 
 ```python
-from desktop_automation_perception import AgentHandoffContext, AgentHandoffProtocol, AgentHandoffReason
+from desktop_automation_agent import AgentHandoffContext, AgentHandoffProtocol, AgentHandoffReason
 
 handoff = AgentHandoffProtocol(
     storage_path="data/agent_handoffs.json",

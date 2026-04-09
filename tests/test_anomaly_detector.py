@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from desktop_automation_perception.anomaly_detector import AnomalyDetector
-from desktop_automation_perception.models import AnomalyCategory, ResourceUsageSnapshot
+from desktop_automation_agent.anomaly_detector import AnomalyDetector
+from desktop_automation_agent.models import AnomalyCategory, ResourceUsageSnapshot
 
 
 def test_anomaly_detector_flags_slow_step_against_baseline(tmp_path):

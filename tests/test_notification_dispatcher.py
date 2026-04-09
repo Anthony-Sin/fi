@@ -1,12 +1,12 @@
 from datetime import datetime, timezone
 
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     NotificationChannel,
     NotificationChannelType,
     NotificationEventType,
     RateLimiterResult,
 )
-from desktop_automation_perception.notification_dispatcher import NotificationDispatcher
+from desktop_automation_agent.notification_dispatcher import NotificationDispatcher
 
 
 class FakeTransportBackend:

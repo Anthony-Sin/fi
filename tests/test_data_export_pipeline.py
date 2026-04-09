@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from desktop_automation_perception.data_export_pipeline import DataExportPipeline
-from desktop_automation_perception.models import (
+from desktop_automation_agent.data_export_pipeline import DataExportPipeline
+from desktop_automation_agent.models import (
     DataExportDestination,
     DataExportDestinationType,
     DataExportFileFormat,
@@ -14,7 +14,7 @@ from desktop_automation_perception.models import (
     StructuredDataRecord,
     StructuredDataSchema,
 )
-from desktop_automation_perception.retry_engine import ExponentialBackoffRetryEngine
+from desktop_automation_agent.retry_engine import ExponentialBackoffRetryEngine
 
 
 class FakeDatabaseExporter:

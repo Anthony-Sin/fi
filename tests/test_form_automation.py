@@ -1,5 +1,5 @@
-from desktop_automation_perception.form_automation import FormAutomationModule
-from desktop_automation_perception.models import (
+from desktop_automation_agent.form_automation import FormAutomationModule
+from desktop_automation_agent.models import (
     AccessibilityElement,
     AccessibilityElementState,
     AccessibilityTree,

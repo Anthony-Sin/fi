@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from desktop_automation_perception.error_classifier import ErrorClassifier
-from desktop_automation_perception.models import ErrorCategory, RecoveryStrategy
+from desktop_automation_agent.error_classifier import ErrorClassifier
+from desktop_automation_agent.models import ErrorCategory, RecoveryStrategy
 
 
 class FakeScreenshotBackend:

@@ -1,14 +1,14 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     ApprovalDecision,
     ApprovalGateAction,
     ApprovalRequest,
     ApprovalRiskLevel,
     HumanReviewDecisionType,
 )
-from desktop_automation_perception.resilience import HumanReviewInterface
+from desktop_automation_agent.resilience import HumanReviewInterface
 
 
 def make_request(request_id: str = "req-1") -> ApprovalRequest:

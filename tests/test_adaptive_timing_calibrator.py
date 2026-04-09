@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from desktop_automation_perception.adaptive_timing_calibrator import (
+from desktop_automation_agent.adaptive_timing_calibrator import (
     AdaptiveTimingCalibrator,
     StartupTimingBenchmark,
 )
-from desktop_automation_perception.models import SmartWaitRequest, WaitType
+from desktop_automation_agent.models import SmartWaitRequest, WaitType
 
 
 def test_adaptive_timing_calibrator_creates_baseline_on_first_run(tmp_path):

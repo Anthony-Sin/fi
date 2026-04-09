@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from desktop_automation_perception.performance_metrics_collector import PerformanceMetricsCollector
+from desktop_automation_agent.performance_metrics_collector import PerformanceMetricsCollector
 
 
 def test_performance_metrics_collector_aggregates_latency_retry_workflow_and_session_metrics(tmp_path):

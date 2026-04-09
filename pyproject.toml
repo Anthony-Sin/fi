@@ -8,7 +8,12 @@ version = "0.1.0"
 description = "Autonomous desktop agent for environment control, account switching, and multi-step workflows."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pyautogui",
+    "pywinauto",
+    "SpeechRecognition",
+    "Pillow"
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

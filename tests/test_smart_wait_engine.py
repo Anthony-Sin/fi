@@ -1,5 +1,5 @@
-from desktop_automation_perception.models import SmartWaitRequest, WaitType
-from desktop_automation_perception.smart_wait_engine import SmartWaitEngine
+from desktop_automation_agent.models import SmartWaitRequest, WaitType
+from desktop_automation_agent.smart_wait_engine import SmartWaitEngine
 
 
 class FakeOCRExtractor:

@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     AccountUsageEvent,
     ApprovalDecision,
     ApprovalGateAction,
@@ -26,7 +26,7 @@ from desktop_automation_perception.models import (
     WorkflowAuditLogEntry,
     WorkflowAuditOutcome,
 )
-from desktop_automation_perception.observability import ComplianceAuditReportGenerator
+from desktop_automation_agent.observability import ComplianceAuditReportGenerator
 
 
 class FakeAuditLogger:

@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from desktop_automation_perception.resilience import SensitiveDataProtector
-from desktop_automation_perception.models import (
+from desktop_automation_agent.resilience import SensitiveDataProtector
+from desktop_automation_agent.models import (
     AccessibilityElement,
     AccessibilityElementState,
     AccessibilityTree,
@@ -11,7 +11,7 @@ from desktop_automation_perception.models import (
     InputActionType,
     ActionLogEntry,
 )
-from desktop_automation_perception.screenshot_failure_recorder import ScreenshotOnFailureRecorder
+from desktop_automation_agent.screenshot_failure_recorder import ScreenshotOnFailureRecorder
 
 
 class FakeScreenshotBackend:

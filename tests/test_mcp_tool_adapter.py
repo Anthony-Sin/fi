@@ -1,10 +1,10 @@
 from datetime import datetime
 from pathlib import Path
 
-from desktop_automation_perception.allowlist_enforcer import ActionAllowlistEnforcer
-from desktop_automation_perception.automation import MCPToolAdapter
-from desktop_automation_perception.context import CaptureContext
-from desktop_automation_perception.models import (
+from desktop_automation_agent.allowlist_enforcer import ActionAllowlistEnforcer
+from desktop_automation_agent.automation import MCPToolAdapter
+from desktop_automation_agent.context import CaptureContext
+from desktop_automation_agent.models import (
     AccessibilityElement,
     AccessibilityElementState,
     AccessibilityTree,
@@ -16,8 +16,8 @@ from desktop_automation_perception.models import (
     PerceptionResult,
     PerceptionSource,
 )
-from desktop_automation_perception.navigation_step_sequencer import NavigationStepSequencer
-from desktop_automation_perception.structured_data_extractor import StructuredDataExtractor
+from desktop_automation_agent.navigation_step_sequencer import NavigationStepSequencer
+from desktop_automation_agent.structured_data_extractor import StructuredDataExtractor
 
 
 class FakePerceptionEngine:

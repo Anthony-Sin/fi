@@ -1,5 +1,5 @@
-from desktop_automation_perception.action_history_analyzer import ActionHistoryAnalyzer
-from desktop_automation_perception.models import (
+from desktop_automation_agent.action_history_analyzer import ActionHistoryAnalyzer
+from desktop_automation_agent.models import (
     ActionLogEntry,
     InputAction,
     InputActionType,

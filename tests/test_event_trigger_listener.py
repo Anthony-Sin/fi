@@ -1,8 +1,8 @@
 import time
 from pathlib import Path
 
-from desktop_automation_perception.event_trigger_listener import EventDrivenTriggerListener
-from desktop_automation_perception.models import (
+from desktop_automation_agent.event_trigger_listener import EventDrivenTriggerListener
+from desktop_automation_agent.models import (
     ClipboardContent,
     ClipboardContentType,
     EventTriggerDefinition,

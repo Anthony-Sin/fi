@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta
 
-from desktop_automation_perception.models import (
+from desktop_automation_agent.models import (
     AccountLoadMetric,
     AutomationTask,
     DeadLetterItem,
@@ -22,7 +22,7 @@ from desktop_automation_perception.models import (
     WorkflowAuditOutcome,
     WorkflowAuditResult,
 )
-from desktop_automation_perception.observability import RealTimeDashboardDataProvider
+from desktop_automation_agent.observability import RealTimeDashboardDataProvider
 
 
 class FakeTaskQueueManager:
