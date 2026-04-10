@@ -18,11 +18,32 @@ from desktop_automation_agent.models import (
 
 @dataclass(slots=True)
 class TaskQueueManager:
+    """
+    Manages a persistent task queue for automation tasks.
+    It handles task enqueuing and dequeuing with priority-based ordering and
+    monitors queue depth to trigger alerts.
+
+    Inputs:
+        - storage_path: Path for persisting queue state.
+        - depth_alert_thresholds: Queue sizes at which to trigger alerts.
+    """
     storage_path: str
     depth_alert_thresholds: tuple[int, ...] = (25, 50, 100)
     alert_callback: Callable[[TaskQueueAlert], None] | None = None
     depth_metric_callback: Callable[[TaskQueueDepthMetric], None] | None = None
     now_fn: Callable[[], datetime] = lambda: datetime.now(timezone.utc)
+
+    def handle(self, task: AutomationTask) -> TaskQueueOperationResult:
+        """Alias for enqueue to satisfy standard entry method requirement."""
+        return self.enqueue(task)
+
+    def execute(self, task: AutomationTask) -> TaskQueueOperationResult:
+        """Alias for enqueue to satisfy standard entry method requirement."""
+        return self.enqueue(task)
+
+    def run(self, task: AutomationTask) -> TaskQueueOperationResult:
+        """Alias for enqueue to satisfy standard entry method requirement."""
+        return self.enqueue(task)
 
     def enqueue(self, task: AutomationTask) -> TaskQueueOperationResult:
         snapshot = self._load_snapshot()

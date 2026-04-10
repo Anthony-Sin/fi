@@ -17,6 +17,14 @@ from desktop_automation_agent.models import (
 
 @dataclass(slots=True)
 class SpecialistAgentRouter:
+    """
+    Routes subtasks to the best available specialist agent based on their registered capabilities.
+    It tracks routing decisions and supports escalation to a central orchestrator.
+
+    Inputs:
+        - storage_path: Path for persisting routing decisions.
+        - escalation_target: Default target for subtasks that cannot be routed.
+    """
     storage_path: str
     escalation_target: str = "orchestrator"
     _registry: dict[str, SpecialistAgentRecord] = field(default_factory=dict, init=False, repr=False)
@@ -38,6 +46,18 @@ class SpecialistAgentRouter:
 
     def list_agents(self) -> list[SpecialistAgentRecord]:
         return list(self._registry.values())
+
+    def execute(self, subtask: OrchestratorSubtask, **kwargs) -> SpecialistRouterResult:
+        """Alias for route_subtask to satisfy standard entry method requirement."""
+        return self.route_subtask(subtask, **kwargs)
+
+    def handle(self, subtask: OrchestratorSubtask, **kwargs) -> SpecialistRouterResult:
+        """Alias for route_subtask to satisfy standard entry method requirement."""
+        return self.route_subtask(subtask, **kwargs)
+
+    def run(self, subtask: OrchestratorSubtask, **kwargs) -> SpecialistRouterResult:
+        """Alias for route_subtask to satisfy standard entry method requirement."""
+        return self.route_subtask(subtask, **kwargs)
 
     def route_subtask(
         self,

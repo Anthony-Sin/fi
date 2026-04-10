@@ -17,8 +17,28 @@ from desktop_automation_agent.models import (
 
 @dataclass(slots=True)
 class HierarchicalTaskDecomposer:
+    """
+    Decomposes high-level natural language task descriptions into a hierarchical tree
+    of phases, tasks, and steps. It also maps these components to responsible specialist modules.
+
+    Inputs:
+        - max_depth: Maximum recursion depth for task decomposition.
+        - execution_expansion_depth: Depth to which tasks are expanded for execution.
+    """
     max_depth: int = 3
     execution_expansion_depth: int | None = None
+
+    def execute(self, task_description: str, **kwargs) -> TaskDecompositionResult:
+        """Alias for decompose to satisfy standard entry method requirement."""
+        return self.decompose(task_description, **kwargs)
+
+    def handle(self, task_description: str, **kwargs) -> TaskDecompositionResult:
+        """Alias for decompose to satisfy standard entry method requirement."""
+        return self.decompose(task_description, **kwargs)
+
+    def run(self, task_description: str, **kwargs) -> TaskDecompositionResult:
+        """Alias for decompose to satisfy standard entry method requirement."""
+        return self.decompose(task_description, **kwargs)
 
     def decompose(
         self,
@@ -234,17 +254,19 @@ class HierarchicalTaskDecomposer:
 
     def _infer_module(self, description: str) -> str:
         normalized = description.casefold()
-        if any(token in normalized for token in ("launch", "open", "start app", "browser", "go to", "navigate to")):
+        if any(token in normalized for token in ("menu", "dialog", "modal", "popup")):
+            return "menu_dialog_navigator"
+        if any(token in normalized for token in ("launch", "open", "start app", "browser", "go to", "navigate to", "url", "http")):
             return "application_launcher"
         if any(token in normalized for token in ("account", "login", "profile", "credential", "session")):
             return "account_rotation_orchestrator"
-        if any(token in normalized for token in ("chat", "prompt", "ai", "llm", "assistant", "ask")):
+        if any(token in normalized for token in ("chat", "prompt", "ai", "llm", "assistant", "ask", "chatgpt", "claude", "gemini")):
             return "ai_interface_navigator"
         if any(token in normalized for token in ("extract", "collect", "read", "capture")):
             return "structured_data_extractor"
-        if any(token in normalized for token in ("fill", "enter", "submit", "form")):
+        if any(token in normalized for token in ("fill", "enter", "submit", "form", "write")):
             return "form_automation"
-        if any(token in normalized for token in ("navigate", "click", "scroll", "verify", "wait")):
+        if any(token in normalized for token in ("navigate", "click", "scroll", "verify", "wait", "button", "link")):
             return "navigation_step_sequencer"
         if any(token in normalized for token in ("switch", "handoff", "clipboard", "workflow")):
             return "multi_application_workflow_coordinator"

@@ -42,6 +42,15 @@ class InMemoryWorkerRuntime:
 
 @dataclass(slots=True)
 class ParallelWorkerPool:
+    """
+    Manages a pool of parallel workers for executing automation tasks.
+    Handles worker lifecycle, task enqueuing, and dispatching tasks to idle workers
+    based on priority and account availability.
+
+    Inputs:
+        - storage_path: Path for persisting worker pool state.
+        - worker_count: Number of workers to maintain in the pool.
+    """
     storage_path: str
     worker_count: int
     execution_mode: WorkerExecutionMode = WorkerExecutionMode.THREAD
@@ -56,6 +65,18 @@ class ParallelWorkerPool:
     isolation_manager: object | None = None
     now_fn: Callable[[], datetime] = lambda: datetime.now(timezone.utc)
     _runtimes: dict[str, object] = field(default_factory=dict, init=False, repr=False)
+
+    def execute(self, task: AutomationTask) -> WorkerPoolOperationResult:
+        """Alias for enqueue to satisfy standard entry method requirement."""
+        return self.enqueue(task)
+
+    def handle(self, task: AutomationTask) -> WorkerPoolOperationResult:
+        """Alias for enqueue to satisfy standard entry method requirement."""
+        return self.enqueue(task)
+
+    def run(self, task: AutomationTask) -> WorkerPoolOperationResult:
+        """Alias for enqueue to satisfy standard entry method requirement."""
+        return self.enqueue(task)
 
     def enqueue(self, task: AutomationTask) -> WorkerPoolOperationResult:
         snapshot = self._load_snapshot()
