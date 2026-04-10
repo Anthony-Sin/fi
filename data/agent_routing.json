@@ -44,6 +44,51 @@
       "escalated": true,
       "reason": "No specialist agent matched subtask 'decomp-subtask-2'; escalated to orchestrator.",
       "timestamp": "2026-04-10T01:44:19.290136"
+    },
+    {
+      "subtask_id": "decomp-subtask-1",
+      "selected_agent": "account_rotation_orchestrator",
+      "selected_module": "account_rotation_orchestrator",
+      "matched_capability": "account_rotation_orchestrator",
+      "escalated": false,
+      "reason": null,
+      "timestamp": "2026-04-10T02:41:07.341851"
+    },
+    {
+      "subtask_id": "decomp-subtask-2",
+      "selected_agent": "application_launcher",
+      "selected_module": "application_launcher",
+      "matched_capability": "application_launcher",
+      "escalated": false,
+      "reason": null,
+      "timestamp": "2026-04-10T02:41:07.343977"
+    },
+    {
+      "subtask_id": "decomp-subtask-3",
+      "selected_agent": "ai_interface_navigator",
+      "selected_module": "ai_interface_navigator",
+      "matched_capability": "ai_interface_navigator",
+      "escalated": false,
+      "reason": null,
+      "timestamp": "2026-04-10T02:41:07.345216"
+    },
+    {
+      "subtask_id": "decomp-subtask-1",
+      "selected_agent": "application_launcher",
+      "selected_module": "application_launcher",
+      "matched_capability": "application_launcher",
+      "escalated": false,
+      "reason": null,
+      "timestamp": "2026-04-10T02:41:07.349820"
+    },
+    {
+      "subtask_id": "decomp-subtask-2",
+      "selected_agent": null,
+      "selected_module": null,
+      "matched_capability": null,
+      "escalated": true,
+      "reason": "No specialist agent matched subtask 'decomp-subtask-2'; escalated to orchestrator.",
+      "timestamp": "2026-04-10T02:41:07.350489"
     }
   ]
 }
