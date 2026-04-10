@@ -1,0 +1,32 @@
+{
+  "applications": [
+    {
+      "name": "Chrome",
+      "launch_mode": "url",
+      "url": "https://www.google.com",
+      "default_arguments": [],
+      "default_url_parameters": {},
+      "startup_signature": {
+        "process_name": "chrome.exe"
+      }
+    },
+    {
+      "name": "Notepad",
+      "launch_mode": "executable",
+      "executable_path": "notepad.exe",
+      "default_arguments": [],
+      "startup_signature": {
+        "process_name": "notepad.exe"
+      }
+    },
+    {
+      "name": "Calculator",
+      "launch_mode": "executable",
+      "executable_path": "calc.exe",
+      "default_arguments": [],
+      "startup_signature": {
+        "process_name": "Calculator.exe"
+      }
+    }
+  ]
+}

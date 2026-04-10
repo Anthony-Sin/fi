@@ -32,6 +32,7 @@ class DesktopAutomationOverlay:
         self.CYBER_BLACK = "#000000"
         self.CYBER_PINK = "#ff003c"
         self.CYBER_BLUE = "#00f0ff"
+        self.CYBER_GREEN = "#00ff41"
         self.CYBER_GRAY = "#1a1a1a"
         self.CYBER_DARK_GRAY = "#0d0d0d"
 
@@ -343,7 +344,7 @@ class DesktopAutomationOverlay:
             lbl = self.active_subtasks[subtask_id]
             color = "#666"
             if status == "RUNNING": color = self.CYBER_BLUE
-            elif status == "COMPLETED": color = self.CYBER_YELLOW
+            elif status == "COMPLETED": color = self.CYBER_GREEN
             elif status == "FAILED": color = self.CYBER_PINK
 
             current_text = lbl.cget("text")
@@ -351,9 +352,10 @@ class DesktopAutomationOverlay:
             lbl.config(text=f"[{status}] {desc}", fg=color)
 
     def add_history_entry(self, entry: Dict[str, Any]):
-        color = self.CYBER_YELLOW if entry["succeeded"] else self.CYBER_PINK
+        color = self.CYBER_GREEN if entry["succeeded"] else self.CYBER_PINK
+        status_prefix = "COMPLETED" if entry["succeeded"] else "FAILED"
         if self.root:
-            self.root.after(0, lambda: self._add_log_line(f"COMPLETED: {entry['command'][:20]}", color))
+            self.root.after(0, lambda: self._add_log_line(f"{status_prefix}: {entry['command'][:20]}", color))
 
     def _on_close(self):
         if messagebox.askokcancel("QUIT", "Terminate Neural Link?"):
