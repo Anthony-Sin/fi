@@ -380,16 +380,26 @@ class DesktopAutomationAgent:
             self._logger.log("ACTION_EXECUTE", {"action": action})
             try:
                 if action_type == "click":
-                    pyautogui.click(x=action.get("x"), y=action.get("y"))
+                    x, y = action.get("x"), action.get("y")
+                    print(f"DEBUG: Executing pyautogui.click(x={x}, y={y})")
+                    pyautogui.click(x=x, y=y)
                 elif action_type == "type":
-                    pyautogui.write(action.get("text"))
+                    text = action.get("text")
+                    print(f"DEBUG: Executing pyautogui.write('{text}')")
+                    pyautogui.write(text)
                 elif action_type == "hotkey":
                     keys = action.get("keys", [])
-                    if keys: pyautogui.hotkey(*keys)
+                    if keys:
+                        print(f"DEBUG: Executing pyautogui.hotkey({', '.join(map(repr, keys))})")
+                        pyautogui.hotkey(*keys)
                 elif action_type == "press":
-                    pyautogui.press(action.get("key"))
+                    key = action.get("key")
+                    print(f"DEBUG: Executing pyautogui.press('{key}')")
+                    pyautogui.press(key)
                 elif action_type == "wait":
-                    time.sleep(float(action.get("seconds", 1.0)))
+                    seconds = float(action.get("seconds", 1.0))
+                    print(f"DEBUG: Executing time.sleep({seconds})")
+                    time.sleep(seconds)
             except Exception as e:
                 print(f"DEBUG: AI Action failed: {e}")
 
