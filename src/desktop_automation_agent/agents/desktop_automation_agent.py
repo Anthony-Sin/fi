@@ -312,20 +312,42 @@ class DesktopAutomationAgent:
             # Simple attempt to parse JSON from AI response
             import json
             import re
-            match = re.search(r"\{.*\}", response_text, re.DOTALL)
-            if match:
-                res_data = json.loads(match.group())
-                succeeded = res_data.get("succeeded", True)
 
-                if succeeded and "actions" in res_data:
-                    self._execute_ai_actions(res_data["actions"])
+            # Find the outermost JSON object
+            start_index = response_text.find('{')
+            end_index = response_text.rfind('}')
 
+            if start_index != -1 and end_index != -1 and end_index > start_index:
+                json_payload = response_text[start_index:end_index+1]
+                try:
+                    res_data = json.loads(json_payload)
+                    succeeded = res_data.get("succeeded", True)
+
+                    if succeeded and "actions" in res_data:
+                        self._execute_ai_actions(res_data["actions"])
+
+                    return OrchestratorSubtaskResult(
+                        subtask_id=subtask.subtask_id,
+                        status=OrchestratorSubtaskStatus.COMPLETED if succeeded else OrchestratorSubtaskStatus.FAILED,
+                        responsible_module="ai_vision_fallback",
+                        produced_outputs={f"{subtask.subtask_id}_result": res_data.get("summary", "AI execution completed")},
+                        reason=res_data.get("reason")
+                    )
+                except json.JSONDecodeError as je:
+                    self._logger.log("AI_PARSE_ERROR", {"error": str(je), "raw_response": response_text})
+                    return OrchestratorSubtaskResult(
+                        subtask_id=subtask.subtask_id,
+                        status=OrchestratorSubtaskStatus.FAILED,
+                        responsible_module="ai_vision_fallback",
+                        reason=f"Failed to parse AI response JSON: {str(je)}"
+                    )
+            else:
+                self._logger.log("AI_NO_JSON_ERROR", {"raw_response": response_text})
                 return OrchestratorSubtaskResult(
                     subtask_id=subtask.subtask_id,
-                    status=OrchestratorSubtaskStatus.COMPLETED if succeeded else OrchestratorSubtaskStatus.FAILED,
+                    status=OrchestratorSubtaskStatus.FAILED,
                     responsible_module="ai_vision_fallback",
-                    produced_outputs={f"{subtask.subtask_id}_result": res_data.get("summary", "AI execution completed")},
-                    reason=res_data.get("reason")
+                    reason="AI response did not contain a valid JSON block."
                 )
         except Exception as e:
             return OrchestratorSubtaskResult(
@@ -391,9 +413,19 @@ class DesktopAutomationAgent:
         try:
             response = self._ai_provider.generate_text(prompt)
             import json, re
-            match = re.search(r"\{.*\}", response, re.DOTALL)
-            if match:
-                data = json.loads(match.group())
+
+            # Find the outermost JSON object
+            start_index = response.find('{')
+            end_index = response.rfind('}')
+
+            if start_index != -1 and end_index != -1 and end_index > start_index:
+                json_payload = response[start_index:end_index+1]
+                try:
+                    data = json.loads(json_payload)
+                except json.JSONDecodeError as je:
+                    self._logger.log("AI_TRANSLATE_PARSE_ERROR", {"error": str(je), "raw_response": response})
+                    return {"instruction": instruction}
+
                 # Handle specific model conversions (like Enum strings to Enums)
                 if module_name == "application_launcher" and "request" in data:
                     from desktop_automation_agent.models import ApplicationLaunchRequest, ApplicationLaunchMode
