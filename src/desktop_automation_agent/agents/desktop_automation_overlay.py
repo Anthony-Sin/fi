@@ -1,4 +1,5 @@
 import sys
+import os
 try:
     import tkinter as tk
     from tkinter import ttk, messagebox
@@ -19,6 +20,11 @@ class DesktopAutomationOverlay:
     """
     A high-fidelity Cyberpunk-themed priority overlay sidebar.
     Strictly follows the design spec for colors, geometry, and layout.
+    Provides real-time mission logs, resource usage tracking, and active operation status.
+
+    Inputs:
+        - on_command_received: Callback function when a new command is issued.
+        - on_settings_changed: Optional callback for configuration updates.
     """
     def __init__(self, on_command_received: Callable[[str], None], on_settings_changed: Optional[Callable[[str, str], None]] = None):
         self.on_command_received = on_command_received
@@ -60,6 +66,10 @@ class DesktopAutomationOverlay:
             return name in font.families()
         except:
             return False
+
+    def run(self):
+        """Alias for launch to satisfy standard entry method requirement."""
+        return self.launch()
 
     def launch(self):
         """Launches the overlay in a separate thread."""
@@ -260,7 +270,16 @@ class DesktopAutomationOverlay:
         tk.Label(row, text=text.upper(), fg=color, bg=self.CYBER_BLACK, font=self.FONT_LOGS, anchor=tk.W).pack(side=tk.LEFT)
 
     def toggle_collapse(self):
-        pass
+        """Toggles the sidebar between collapsed and expanded states."""
+        if not self.root:
+            return
+
+        if self.is_collapsed:
+            self.root.geometry("400x850")
+            self.is_collapsed = False
+        else:
+            self.root.geometry("60x850")
+            self.is_collapsed = True
 
     def _send_text_command(self):
         command = self.entry.get()

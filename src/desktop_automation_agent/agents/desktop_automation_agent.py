@@ -24,8 +24,14 @@ class DesktopAutomationAgent:
     """
     Unified agent that orchestrates complex desktop automation tasks.
     It decomposes high-level requests into subtasks and routes them to specialized modules.
-
     This agent acts as the central brain, coordinating perception, action, and account management.
+
+    Inputs:
+        - orchestrator: Core engine for planning and execution.
+        - router: Component for routing subtasks to specialists.
+        - overlay: UI component for real-time interaction and status.
+    Outputs:
+        - OrchestratorAgentResult: Comprehensive result of the task execution.
     """
     orchestrator: OrchestratorAgentCore = field(default_factory=OrchestratorAgentCore)
     router: Optional[SpecialistAgentRouter] = None
@@ -78,6 +84,14 @@ class DesktopAutomationAgent:
                 capabilities=capabilities or [module_name],
                 module_reference=module_name
             )
+
+    def run(self, task_description: str) -> OrchestratorAgentResult:
+        """Alias for execute to satisfy standard entry method requirement."""
+        return self.execute(task_description)
+
+    def handle(self, task_description: str) -> OrchestratorAgentResult:
+        """Alias for execute to satisfy standard entry method requirement."""
+        return self.execute(task_description)
 
     def execute(self, task_description: str) -> OrchestratorAgentResult:
         """

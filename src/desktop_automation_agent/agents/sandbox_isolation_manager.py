@@ -56,6 +56,15 @@ class InMemorySandboxBackend:
 
 @dataclass(slots=True)
 class SandboxIsolationManager:
+    """
+    Enforces security and isolation policies for worker processes.
+    It manages worker launch specifications, including OS user accounts and virtual environments,
+    and monitors for violations of network, file, and resource access policies.
+
+    Inputs:
+        - policy_path: Path to the JSON file defining sandbox policies.
+        - violation_log_path: Path to the JSON file where violations are recorded.
+    """
     policy_path: str
     violation_log_path: str
     backend: object | None = None
@@ -65,6 +74,18 @@ class SandboxIsolationManager:
     _active_runtimes: dict[str, object] = field(default_factory=dict, init=False, repr=False)
     _policy_cache: SandboxIsolationPolicy | None = field(default=None, init=False, repr=False)
     _policy_marker: tuple[int, int] | None = field(default=None, init=False, repr=False)
+
+    def execute(self, **kwargs) -> SandboxIsolationResult:
+        """Alias for launch_worker to satisfy standard entry method requirement."""
+        return self.launch_worker(**kwargs)
+
+    def handle(self, **kwargs) -> SandboxIsolationResult:
+        """Alias for launch_worker to satisfy standard entry method requirement."""
+        return self.launch_worker(**kwargs)
+
+    def run(self, **kwargs) -> SandboxIsolationResult:
+        """Alias for launch_worker to satisfy standard entry method requirement."""
+        return self.launch_worker(**kwargs)
 
     def launch_worker(
         self,

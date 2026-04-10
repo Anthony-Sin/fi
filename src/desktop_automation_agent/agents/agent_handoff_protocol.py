@@ -18,8 +18,28 @@ from desktop_automation_agent.models import (
 
 @dataclass(slots=True)
 class AgentHandoffProtocol:
+    """
+    Manages the protocol for handing off tasks between different specialist agents.
+    It records handoff events and notifies receiving agents via a message bus.
+
+    Inputs:
+        - storage_path: Path to the JSON file where handoffs are persisted.
+        - message_bus: Optional message bus instance for real-time notifications.
+    """
     storage_path: str
     message_bus: object | None = None
+
+    def handle(self, **kwargs) -> AgentHandoffResult:
+        """Alias for create_handoff to satisfy standard entry method requirement."""
+        return self.create_handoff(**kwargs)
+
+    def execute(self, **kwargs) -> AgentHandoffResult:
+        """Alias for create_handoff to satisfy standard entry method requirement."""
+        return self.create_handoff(**kwargs)
+
+    def run(self, **kwargs) -> AgentHandoffResult:
+        """Alias for create_handoff to satisfy standard entry method requirement."""
+        return self.create_handoff(**kwargs)
 
     def create_handoff(
         self,
