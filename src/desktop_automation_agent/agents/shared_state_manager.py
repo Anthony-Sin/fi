@@ -20,6 +20,15 @@ from desktop_automation_agent.models import (
 
 @dataclass(slots=True)
 class SharedStateManager:
+    """
+    Manages state shared between different agents.
+    It provides methods for defining, reading, and writing shared fields with conflict
+    resolution policies and access control for agents.
+
+    Inputs:
+        - storage_path: Path for persisting shared state and write logs.
+        - conflict_policy: Policy for resolving concurrent write attempts.
+    """
     storage_path: str
     conflict_policy: SharedStateConflictPolicy = SharedStateConflictPolicy.LAST_WRITE_WINS
     agent_priorities: dict[str, int] = field(default_factory=dict)
@@ -54,6 +63,18 @@ class SharedStateManager:
             ]
         self._save_snapshot(snapshot)
         return SharedStateResult(succeeded=True, state_field=record)
+
+    def handle(self, **kwargs) -> SharedStateResult:
+        """Alias for read_field to satisfy standard entry method requirement."""
+        return self.read_field(**kwargs)
+
+    def execute(self, **kwargs) -> SharedStateResult:
+        """Alias for read_field to satisfy standard entry method requirement."""
+        return self.read_field(**kwargs)
+
+    def run(self, **kwargs) -> SharedStateResult:
+        """Alias for read_field to satisfy standard entry method requirement."""
+        return self.read_field(**kwargs)
 
     def read_field(
         self,

@@ -16,7 +16,26 @@ from desktop_automation_agent.models import (
 
 @dataclass(slots=True)
 class AgentMessageBus:
+    """
+    Asynchronous message bus for communication between agents.
+    Supports both topic-based pub/sub and direct point-to-point messaging.
+
+    Inputs:
+        - storage_path: Path to the JSON file where messages and subscriptions are persisted.
+    """
     storage_path: str
+
+    def handle(self, **kwargs) -> AgentBusDeliveryResult:
+        """Alias for publish to satisfy standard entry method requirement."""
+        return self.publish(**kwargs)
+
+    def execute(self, **kwargs) -> AgentBusDeliveryResult:
+        """Alias for publish to satisfy standard entry method requirement."""
+        return self.publish(**kwargs)
+
+    def run(self, **kwargs) -> AgentBusDeliveryResult:
+        """Alias for publish to satisfy standard entry method requirement."""
+        return self.publish(**kwargs)
 
     def publish(
         self,

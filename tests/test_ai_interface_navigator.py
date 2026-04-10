@@ -120,6 +120,8 @@ def make_element(name, role, bounds, *, text=None):
 
 
 def test_ai_interface_navigator_submits_and_extracts_completed_response():
+    """Verifies that AIInterfaceNavigator can successfully locate an input field,
+    inject a prompt, submit it, and then wait for and extract the stable response text."""
     input_field = make_element("Message", "edit", (10, 10, 210, 80))
     response_panel = make_element("Conversation", "document", (20, 100, 500, 500), text="Final answer")
     navigator = AIInterfaceNavigator(
@@ -165,6 +167,8 @@ def test_ai_interface_navigator_submits_and_extracts_completed_response():
 
 
 def test_ai_interface_navigator_uses_submit_button_when_enter_fails():
+    """Verifies that if the 'ENTER' key submission fails, the navigator correctly
+    falls back to clicking a designated submit button to send the prompt."""
     input_field = make_element("Prompt", "edit", (10, 10, 210, 80))
     button = make_element("Send", "button", (220, 20, 260, 60))
     navigator = AIInterfaceNavigator(
@@ -205,6 +209,8 @@ def test_ai_interface_navigator_uses_submit_button_when_enter_fails():
 
 
 def test_ai_interface_navigator_detects_streaming_error_dialog():
+    """Verifies that the navigator monitors for and correctly identifies
+    known error dialogs that may appear during the AI's response generation."""
     input_field = make_element("Message", "edit", (10, 10, 210, 80))
     error = make_element("Something went wrong", "dialog", (50, 50, 250, 140), text="Something went wrong")
     navigator = AIInterfaceNavigator(
@@ -241,6 +247,8 @@ def test_ai_interface_navigator_detects_streaming_error_dialog():
 
 
 def test_ai_interface_navigator_detects_session_timeout():
+    """Verifies that the navigator can identify session timeout indicators
+    (like a sign-in dialog) and report the corresponding status."""
     input_field = make_element("Message", "edit", (10, 10, 210, 80))
     expired = make_element("Sign in", "dialog", (50, 50, 250, 140), text="Please sign in")
     navigator = AIInterfaceNavigator(
@@ -276,6 +284,8 @@ def test_ai_interface_navigator_detects_session_timeout():
 
 
 def test_ai_interface_navigator_times_out_when_streaming_indicator_never_clears():
+    """Verifies that the navigator correctly triggers a timeout if the
+    streaming indicator (e.g., 'Stop generating' button) persists beyond the time limit."""
     input_field = make_element("Message", "edit", (10, 10, 210, 80))
     spinner = make_element("Stop generating", "button", (220, 20, 280, 60), text="Stop generating")
     navigator = AIInterfaceNavigator(

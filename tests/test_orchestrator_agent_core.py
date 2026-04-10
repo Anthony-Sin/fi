@@ -3,6 +3,8 @@ from desktop_automation_agent.orchestrator_agent_core import OrchestratorAgentCo
 
 
 def test_orchestrator_agent_decomposes_task_into_ordered_subtasks():
+    """Verifies that the orchestrator can decompose a natural language
+    request into a sequence of ordered subtasks with clear dependencies."""
     agent = OrchestratorAgentCore()
 
     plan = agent.create_plan("Open ChatGPT, then submit a prompt, then verify the response.")
@@ -14,6 +16,8 @@ def test_orchestrator_agent_decomposes_task_into_ordered_subtasks():
 
 
 def test_orchestrator_agent_assigns_responsible_modules_by_subtask_type():
+    """Verifies that each generated subtask is assigned to the correct
+    specialized module based on the action it requires."""
     agent = OrchestratorAgentCore()
 
     plan = agent.create_plan("Launch the app, then fill the form, then open the menu dialog.")
@@ -23,6 +27,8 @@ def test_orchestrator_agent_assigns_responsible_modules_by_subtask_type():
 
 
 def test_orchestrator_agent_tracks_completion_and_final_outputs():
+    """Verifies that the orchestrator accurately tracks the completion of
+    all subtasks and aggregates their final outputs into the workflow result."""
     agent = OrchestratorAgentCore()
     plan = agent.create_plan("Open ChatGPT then submit a prompt")
 
@@ -38,6 +44,8 @@ def test_orchestrator_agent_tracks_completion_and_final_outputs():
 
 
 def test_orchestrator_agent_reroutes_dependents_after_partial_failure():
+    """Verifies that if a subtask fails, the orchestrator identifies the
+    failure and reroutes all dependent subtasks to a fallback module."""
     agent = OrchestratorAgentCore(fallback_module="manual_ops")
     plan = agent.create_plan("Open ChatGPT then submit a prompt then verify response")
 
@@ -55,6 +63,8 @@ def test_orchestrator_agent_reroutes_dependents_after_partial_failure():
 
 
 def test_orchestrator_agent_accepts_prebuilt_subtask_results_from_executor():
+    """Verifies that the orchestrator can correctly process and integrate
+    pre-constructed subtask result objects from its execution engine."""
     agent = OrchestratorAgentCore()
     plan = agent.create_plan("Navigate and verify")
 
