@@ -41,6 +41,8 @@ def create_agent() -> DesktopAutomationAgent:
     ocr_extractor = OCRExtractor(backend=ocr_backend)
 
     # 2. Initialize Safe Input Simulator
+    import pyautogui
+    width, height = pyautogui.size()
     input_backend = PyAutoGUIBackend.create()
     screen_inspector = StaticScreenInspector(bounds=ScreenBounds(0, 0, 1920, 1080))
     input_runner = SafeInputSimulator(

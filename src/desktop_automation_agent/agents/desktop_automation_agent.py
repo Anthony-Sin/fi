@@ -17,6 +17,8 @@ from desktop_automation_agent.models import (
 )
 
 
+from desktop_automation_agent.observability.session_logger import SessionLogger
+
 @dataclass(slots=True)
 class DesktopAutomationAgent:
     """
@@ -36,6 +38,7 @@ class DesktopAutomationAgent:
     total_cost: float = 0.0
     _stop_requested: bool = False
     _ai_provider: Optional[Any] = None
+    _logger: SessionLogger = field(default_factory=SessionLogger)
 
     def __post_init__(self):
         if self.router is None:
@@ -82,6 +85,7 @@ class DesktopAutomationAgent:
 
         Example: "Switch to my work account, open ChatGPT, and ask 'What is the weather in Tokyo?'"
         """
+        self._logger.log("TASK_START", {"description": task_description})
         self._stop_requested = False
         self.overlay.update_status("Decomposing task...")
 
@@ -146,6 +150,7 @@ class DesktopAutomationAgent:
         else:
             self.overlay.update_status(f"Failed: {result.reason[:30]}")
 
+        self._logger.log("TASK_END", {"succeeded": result.succeeded, "reason": result.reason})
         return result
 
     def update_settings(self, api_key: str, model_name: str):
@@ -184,6 +189,7 @@ class DesktopAutomationAgent:
 
     def _solve_with_ai(self, subtask: OrchestratorSubtask, context: Dict[str, str]) -> OrchestratorSubtaskResult:
         """Fallback mechanism using Gemini to solve a task when specialists are missing or fail."""
+        self.overlay.update_subtask_status(subtask.subtask_id, "RUNNING")
         if not self.api_key:
             return OrchestratorSubtaskResult(
                 subtask_id=subtask.subtask_id,
@@ -207,18 +213,33 @@ class DesktopAutomationAgent:
             screenshot = Image.new('RGB', (1920, 1080), color = (73, 109, 137))
 
         prompt = (
-            f"You are a desktop automation assistant. Your current subtask is: '{subtask.description}'. "
-            "The user wants you to execute this task on their desktop. "
-            "Analyze the provided screenshot and determine the exact steps to take. "
-            "Return a JSON response with a list of actions to perform. "
-            "Supported actions: click(x, y), type(text), hotkey(k1, k2), wait(seconds). "
-            "Example response format: "
-            "{ \"succeeded\": true, \"actions\": [{\"type\": \"click\", \"x\": 100, \"y\": 200}, {\"type\": \"type\", \"text\": \"hello\"}], \"summary\": \"Clicked and typed hello\" }"
+            f"You are a desktop automation assistant. Your current subtask is: '{subtask.description}'.\n"
+            "The user wants you to execute this task on their desktop.\n"
+            "Analyze the provided screenshot and determine the exact steps to take.\n"
+            "YOU MUST RETURN A JSON OBJECT ONLY.\n"
+            "Supported actions:\n"
+            "- {\"type\": \"click\", \"x\": integer, \"y\": integer}\n"
+            "- {\"type\": \"type\", \"text\": \"string\"}\n"
+            "- {\"type\": \"hotkey\", \"keys\": [\"key1\", \"key2\"]}\n"
+            "- {\"type\": \"press\", \"key\": \"string\"}\n"
+            "- {\"type\": \"wait\", \"seconds\": float}\n\n"
+            "Example response format:\n"
+            "{\n"
+            "  \"succeeded\": true,\n"
+            "  \"actions\": [\n"
+            "    {\"type\": \"hotkey\", \"keys\": [\"win\", \"r\"]},\n"
+            "    {\"type\": \"wait\", \"seconds\": 0.5},\n"
+            "    {\"type\": \"type\", \"text\": \"chrome https://aistudio.google.com/\\n\"}\n"
+            "  ],\n"
+            "  \"summary\": \"Opened Chrome via Win+R and navigated to URL\"\n"
+            "}\n"
             "If the task cannot be done, set succeeded to false and provide a reason."
         )
 
         try:
+            self._logger.log("AI_PROMPT", {"subtask": subtask.subtask_id, "prompt": prompt})
             response_text = ai.analyze_image(prompt, screenshot)
+            self._logger.log("AI_RESPONSE", {"subtask": subtask.subtask_id, "response": response_text})
             # Simple attempt to parse JSON from AI response
             import json
             import re
@@ -261,6 +282,7 @@ class DesktopAutomationAgent:
             if self._stop_requested: break
 
             action_type = action.get("type")
+            self._logger.log("ACTION_EXECUTE", {"action": action})
             try:
                 if action_type == "click":
                     pyautogui.click(x=action.get("x"), y=action.get("y"))
@@ -269,6 +291,8 @@ class DesktopAutomationAgent:
                 elif action_type == "hotkey":
                     keys = action.get("keys", [])
                     if keys: pyautogui.hotkey(*keys)
+                elif action_type == "press":
+                    pyautogui.press(action.get("key"))
                 elif action_type == "wait":
                     time.sleep(float(action.get("seconds", 1.0)))
             except Exception as e:
@@ -305,10 +329,21 @@ class DesktopAutomationAgent:
                 if module_name == "application_launcher" and "request" in data:
                     from desktop_automation_agent.models import ApplicationLaunchRequest, ApplicationLaunchMode
                     req = data["request"]
+
+                    # URL Detection Override
+                    url = req.get("url")
+                    launch_mode_str = req.get("launch_mode", "start_menu")
+                    if "http" in instruction and not url:
+                        import re
+                        urls = re.findall(r'https?://\S+', instruction)
+                        if urls:
+                            url = urls[0].strip(" ,.;")
+                            launch_mode_str = "url"
+
                     data["request"] = ApplicationLaunchRequest(
                         application_name=req.get("application_name", instruction),
-                        launch_mode=ApplicationLaunchMode(req.get("launch_mode", "start_menu")),
-                        url=req.get("url"),
+                        launch_mode=ApplicationLaunchMode(launch_mode_str),
+                        url=url,
                         executable_path=req.get("executable_path")
                     )
                 if module_name == "form_automation" and "fields" in data:
