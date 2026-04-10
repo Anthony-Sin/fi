@@ -42,7 +42,7 @@ def create_agent() -> DesktopAutomationAgent:
 
     # 2. Initialize Safe Input Simulator
     input_backend = PyAutoGUIBackend.create()
-    screen_inspector = StaticScreenInspector(bounds=ScreenBounds(left=0, top=0, right=1920, bottom=1080)) # Default resolution
+    screen_inspector = StaticScreenInspector(bounds=ScreenBounds(0, 0, 1920, 1080))
     input_runner = SafeInputSimulator(
         backend=input_backend,
         window_manager=Win32WindowManager(),
