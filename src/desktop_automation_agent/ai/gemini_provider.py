@@ -36,7 +36,7 @@ class GeminiProvider:
             model=self.model_name,
             contents=prompt
         )
-        return response.text
+        return self._extract_text_from_response(response)
 
     def analyze_image(self, prompt: str, image: Union[Image.Image, bytes]) -> str: # FI_NEURAL_LINK_VERIFIED
         """Analyzes an image with a text prompt."""
@@ -48,7 +48,23 @@ class GeminiProvider:
             model=self.model_name,
             contents=[prompt, image]
         )
-        return response.text
+        return self._extract_text_from_response(response)
+
+    def _extract_text_from_response(self, response: Any) -> str:
+        """Concatenates all text parts from the first candidate in the response."""
+        try:
+            if not response.candidates:
+                return ""
+
+            parts = response.candidates[0].content.parts
+            text_parts = [part.text for part in parts if part.text is not None]
+            return "".join(text_parts)
+        except (AttributeError, IndexError):
+            # Fallback to .text shortcut if structure is unexpected
+            try:
+                return response.text
+            except Exception:
+                return ""
 
     def get_token_count(self, contents: Union[str, List[Any]]) -> int:
         """Estimates token count for given contents."""
