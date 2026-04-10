@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
+from desktop_automation_agent._time import utc_now
 from desktop_automation_agent.agents.hierarchical_task_decomposer import HierarchicalTaskDecomposer
 from desktop_automation_agent.agents.desktop_automation_overlay import DesktopAutomationOverlay
 from desktop_automation_agent.agents.orchestrator_agent_core import OrchestratorAgentCore
@@ -28,6 +29,11 @@ class DesktopAutomationAgent:
     router: Optional[SpecialistAgentRouter] = None
     specialists: Dict[str, Any] = field(default_factory=dict)
     overlay: Optional[DesktopAutomationOverlay] = None
+    command_history: List[Dict[str, Any]] = field(default_factory=list)
+    api_key: str = ""
+    selected_model: str = "gemini-3.1-flash-lite-preview"
+    total_tokens: int = 0
+    total_cost: float = 0.0
 
     def __post_init__(self):
         if self.router is None:
@@ -38,7 +44,10 @@ class DesktopAutomationAgent:
             self.orchestrator.task_decomposer = HierarchicalTaskDecomposer()
 
         if self.overlay is None:
-            self.overlay = DesktopAutomationOverlay(on_command_received=self.execute_from_overlay)
+            self.overlay = DesktopAutomationOverlay(
+                on_command_received=self.execute_from_overlay,
+                on_settings_changed=self.update_settings
+            )
 
     def register_specialist(
         self,
@@ -71,13 +80,56 @@ class DesktopAutomationAgent:
 
         Example: "Switch to my work account, open ChatGPT, and ask 'What is the weather in Tokyo?'"
         """
+        self.overlay.update_status("Decomposing task...")
         plan = self.orchestrator.create_plan(task_description)
-        result = self.orchestrator.execute_plan(plan, executor=self._dispatch_with_router)
+
+        # Notify overlay about the plan
+        self.overlay.set_active_plan(plan)
+
+        def monitored_executor(subtask: OrchestratorSubtask, context: Dict[str, str]) -> Any:
+            self.overlay.update_subtask_status(subtask.subtask_id, "RUNNING")
+            res = self._dispatch_with_router(subtask, context)
+
+            # Simulate token usage and cost for the subtask (real integration would use the AI provider response)
+            # In a real scenario, specialists would return token counts.
+            tokens_used = 150  # Placeholder
+            cost_per_token = 0.0000001 if "lite" in self.selected_model.lower() else 0.0000005
+            subtask_cost = tokens_used * cost_per_token
+
+            self.total_tokens += tokens_used
+            self.total_cost += subtask_cost
+
+            self.overlay.update_resource_usage(self.total_tokens, self.total_cost)
+
+            status = "COMPLETED" if getattr(res, 'succeeded', True) else "FAILED"
+            self.overlay.update_subtask_status(subtask.subtask_id, status)
+            return res
+
+        result = self.orchestrator.execute_plan(plan, executor=monitored_executor)
+
+        history_entry = {
+            "timestamp": str(utc_now()),
+            "command": task_description,
+            "succeeded": result.succeeded,
+            "reason": result.reason,
+            "tokens": 150 * len(plan.subtasks), # rough estimate for history
+            "cost": 150 * len(plan.subtasks) * (0.0000001 if "lite" in self.selected_model.lower() else 0.0000005)
+        }
+        self.command_history.append(history_entry)
+        self.overlay.add_history_entry(history_entry)
+
         if result.succeeded:
-            self.overlay.update_status("Success")
+            self.overlay.update_status("Task completed successfully")
         else:
             self.overlay.update_status(f"Failed: {result.reason[:30]}")
+
         return result
+
+    def update_settings(self, api_key: str, model_name: str):
+        """Updates agent settings from the overlay."""
+        self.api_key = api_key
+        self.selected_model = model_name
+        print(f"DEBUG: Settings updated - Model: {self.selected_model}")
 
     def execute_from_overlay(self, command: str):
         """Callback for overlay interaction."""
