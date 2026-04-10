@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,6 +15,9 @@ from desktop_automation_agent.models import (
     SessionTrackerSnapshot,
     SessionValidationResult,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -110,10 +114,15 @@ class SessionStateTracker:
         )
 
     def _load_snapshot(self) -> SessionTrackerSnapshot:
-        path = Path(self.storage_path)
-        if not path.exists():
+        try:
+            path = Path(self.storage_path)
+            if not path.exists():
+                return SessionTrackerSnapshot()
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning(f"Failed to load session status from {self.storage_path}: {e}")
             return SessionTrackerSnapshot()
-        payload = json.loads(path.read_text(encoding="utf-8"))
+
         return SessionTrackerSnapshot(
             current_state=SessionState(payload.get("current_state", SessionState.UNKNOWN.value)),
             health_log=[
@@ -128,9 +137,10 @@ class SessionStateTracker:
         )
 
     def _save_snapshot(self, snapshot: SessionTrackerSnapshot) -> None:
-        path = Path(self.storage_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {
+        try:
+            path = Path(self.storage_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
             "current_state": snapshot.current_state.value,
             "health_log": [
                 {
@@ -141,5 +151,7 @@ class SessionStateTracker:
                 }
                 for event in snapshot.health_log
             ],
-        }
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            }
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to save session status to {self.storage_path}: {e}")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,6 +12,9 @@ from desktop_automation_agent.models import (
     AccountRegistrySnapshot,
     AccountUsageEvent,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -135,24 +139,32 @@ class AccountRegistry:
         return [event for event in snapshot.usage_history if event.account_name.casefold() == name.casefold()]
 
     def _load_snapshot(self) -> AccountRegistrySnapshot:
-        path = Path(self.storage_path)
-        if not path.exists():
+        try:
+            path = Path(self.storage_path)
+            if not path.exists():
+                return AccountRegistrySnapshot()
+
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning(f"Failed to load accounts from {self.storage_path}: {e}")
             return AccountRegistrySnapshot()
 
-        payload = json.loads(path.read_text(encoding="utf-8"))
         return AccountRegistrySnapshot(
             accounts=[self._deserialize_account(item) for item in payload.get("accounts", [])],
             usage_history=[self._deserialize_usage(item) for item in payload.get("usage_history", [])],
         )
 
     def _save_snapshot(self, snapshot: AccountRegistrySnapshot) -> None:
-        path = Path(self.storage_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {
-            "accounts": [self._serialize_account(account) for account in snapshot.accounts],
-            "usage_history": [self._serialize_usage(event) for event in snapshot.usage_history],
-        }
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        try:
+            path = Path(self.storage_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "accounts": [self._serialize_account(account) for account in snapshot.accounts],
+                "usage_history": [self._serialize_usage(event) for event in snapshot.usage_history],
+            }
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to save accounts to {self.storage_path}: {e}")
 
     def _serialize_account(self, account: AccountRecord) -> dict:
         payload = asdict(account)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,16 +16,23 @@ from desktop_automation_agent.models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class SubprocessBrowserLauncher:
     def launch(self, browser_executable: str, profile_directory: str, application: str | None = None) -> int | None:
-        import subprocess
+        try:
+            import subprocess
 
-        command = [browser_executable, f"--user-data-dir={profile_directory}"]
-        if application:
-            command.append(application)
-        process = subprocess.Popen(command)
-        return int(process.pid)
+            command = [browser_executable, f"--user-data-dir={profile_directory}"]
+            if application:
+                command.append(application)
+            process = subprocess.Popen(command)
+            return int(process.pid)
+        except Exception as e:
+            logger.warning(f"Failed to launch browser: {e}")
+            return None
 
     def close(self, process_id: int | None, profile_directory: str) -> bool:
         if process_id is None:
@@ -85,15 +93,23 @@ class BrowserProfileSwitcher:
         snapshot = self._load_snapshot()
         profile = self._find_profile(snapshot, account_name)
         if profile is None:
-            return BrowserProfileResult(succeeded=False, reason="Browser profile not found.")
+            return BrowserProfileResult(succeeded=False, reason=f"Browser profile not found for {account_name}.")
 
         process_id = self.launcher.launch(
             browser_executable=profile.browser_executable,
             profile_directory=profile.profile_directory,
             application=profile.application,
         )
-        if not self.account_verifier(account_name, profile.profile_directory):
-            return BrowserProfileResult(succeeded=False, profile=profile, reason="Launched profile did not verify the expected account.")
+        if process_id is None:
+            return BrowserProfileResult(succeeded=False, reason="Browser failed to launch.")
+
+        # Verification that the account is actually active in the launched profile
+        try:
+            if not self.account_verifier(account_name, profile.profile_directory):
+                return BrowserProfileResult(succeeded=False, profile=profile, reason=f"Account verification failed for {account_name}.")
+        except Exception as e:
+            logger.warning(f"Account verification threw an error: {e}")
+            return BrowserProfileResult(succeeded=False, profile=profile, reason=f"Error during account verification: {e}")
 
         launched_at = datetime.now(timezone.utc)
         updated_profile = BrowserProfileRecord(
@@ -185,23 +201,31 @@ class BrowserProfileSwitcher:
         return None
 
     def _load_snapshot(self) -> BrowserProfileSnapshot:
-        path = Path(self.storage_path)
-        if not path.exists():
+        try:
+            path = Path(self.storage_path)
+            if not path.exists():
+                return BrowserProfileSnapshot()
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning(f"Failed to load browser profiles from {self.storage_path}: {e}")
             return BrowserProfileSnapshot()
-        payload = json.loads(path.read_text(encoding="utf-8"))
+
         return BrowserProfileSnapshot(
             profiles=[self._deserialize_profile(item) for item in payload.get("profiles", [])],
             sessions=[self._deserialize_session(item) for item in payload.get("sessions", [])],
         )
 
     def _save_snapshot(self, snapshot: BrowserProfileSnapshot) -> None:
-        path = Path(self.storage_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {
-            "profiles": [self._serialize_profile(profile) for profile in snapshot.profiles],
-            "sessions": [self._serialize_session(session) for session in snapshot.sessions],
-        }
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        try:
+            path = Path(self.storage_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "profiles": [self._serialize_profile(profile) for profile in snapshot.profiles],
+                "sessions": [self._serialize_session(session) for session in snapshot.sessions],
+            }
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to save browser profiles to {self.storage_path}: {e}")
 
     def _serialize_profile(self, profile: BrowserProfileRecord) -> dict:
         return {

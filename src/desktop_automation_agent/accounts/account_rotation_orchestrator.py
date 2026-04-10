@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -14,6 +15,9 @@ from desktop_automation_agent.models import (
     RotationExecutionSnapshot,
     RotationTask,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -160,10 +164,15 @@ class AccountRotationOrchestrator:
         return latest_timestamp + minimum_reuse_interval > datetime.now(timezone.utc)
 
     def _load_snapshot(self) -> RotationExecutionSnapshot:
-        path = Path(self.storage_path)
-        if not path.exists():
+        try:
+            path = Path(self.storage_path)
+            if not path.exists():
+                return RotationExecutionSnapshot()
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning(f"Failed to load rotation history from {self.storage_path}: {e}")
             return RotationExecutionSnapshot()
-        payload = json.loads(path.read_text(encoding="utf-8"))
+
         return RotationExecutionSnapshot(
             events=[
                 RotationExecutionEvent(
@@ -178,9 +187,10 @@ class AccountRotationOrchestrator:
         )
 
     def _save_snapshot(self, snapshot: RotationExecutionSnapshot) -> None:
-        path = Path(self.storage_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {
+        try:
+            path = Path(self.storage_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
             "events": [
                 {
                     "task_id": event.task_id,
@@ -191,5 +201,7 @@ class AccountRotationOrchestrator:
                 }
                 for event in snapshot.events
             ]
-        }
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            }
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to save rotation history to {self.storage_path}: {e}")
