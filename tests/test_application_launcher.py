@@ -65,6 +65,8 @@ def make_element(name, role, bounds=(10, 10, 50, 50), text=None):
 
 
 def test_application_launcher_launches_registered_executable_and_verifies_signature(tmp_path):
+    """Verifies that the launcher can start a registered executable and
+    confirm its successful startup by checking for its window title."""
     registry = ApplicationRegistry(str(tmp_path / "apps.json"))
     registry.upsert_application(
         KnownApplicationRecord(
@@ -102,6 +104,8 @@ def test_application_launcher_launches_registered_executable_and_verifies_signat
 
 
 def test_application_launcher_supports_start_menu_launch_and_ui_element_verification(tmp_path):
+    """Verifies that the launcher supports searching for and launching apps
+    via the start menu and verifies success using a UI element selector."""
     registry = ApplicationRegistry(str(tmp_path / "apps.json"))
     record = KnownApplicationRecord(
         name="calc",
@@ -136,6 +140,8 @@ def test_application_launcher_supports_start_menu_launch_and_ui_element_verifica
 
 
 def test_application_launcher_supports_url_launch_with_parameters(tmp_path):
+    """Verifies that the launcher can launch URLs with dynamically constructed
+    query parameters."""
     registry = ApplicationRegistry(str(tmp_path / "apps.json"))
     launcher = ApplicationLauncher(
         registry=registry,
@@ -159,6 +165,8 @@ def test_application_launcher_supports_url_launch_with_parameters(tmp_path):
 
 
 def test_application_launcher_retries_then_escalates_on_failure(tmp_path):
+    """Verifies that the launcher correctly attempts retries on failed
+    launch attempts and escalates once the retry limit is reached."""
     registry = ApplicationRegistry(str(tmp_path / "apps.json"))
     registry.upsert_application(
         KnownApplicationRecord(
@@ -192,6 +200,8 @@ def test_application_launcher_retries_then_escalates_on_failure(tmp_path):
 
 
 def test_application_registry_persists_known_applications(tmp_path):
+    """Verifies that application registration data is correctly persisted to
+    and restored from disk."""
     registry = ApplicationRegistry(str(tmp_path / "apps.json"))
     registry.upsert_application(
         KnownApplicationRecord(
@@ -213,6 +223,8 @@ def test_application_registry_persists_known_applications(tmp_path):
 
 
 def test_application_launcher_blocks_disallowed_launch_targets(tmp_path):
+    """Verifies that the launcher respects allowlist restrictions and
+    prevents launching applications or URLs not present in the allowlist."""
     allowlist_path = tmp_path / "allowlist.json"
     allowlist_path.write_text(
         '{"action_types":["launch_application"],"applications":["notes"],"urls":["https://safe.example/*"],"file_paths":["C:/safe/*"]}',

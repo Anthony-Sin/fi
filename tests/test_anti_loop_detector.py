@@ -18,6 +18,8 @@ class FakeAuditLogger:
 
 
 def test_anti_loop_detector_triggers_on_step_execution_limit_and_logs_full_history(tmp_path):
+    """Verifies that AntiLoopDetector correctly identifies when a single step
+    exceeds its allowed execution limit and accurately logs the entire step history."""
     audit_logger = FakeAuditLogger()
     detector = AntiLoopDetector(
         storage_path=str(Path(tmp_path) / "anti_loop.json"),
@@ -46,6 +48,8 @@ def test_anti_loop_detector_triggers_on_step_execution_limit_and_logs_full_histo
 
 
 def test_anti_loop_detector_triggers_pipeline_timeout_and_escalation(tmp_path):
+    """Verifies that the detector triggers a PIPELINE_TIMEOUT when the workflow
+    exceeds its maximum duration and correctly escalates the issue."""
     manager = EscalationManager(
         storage_path=str(Path(tmp_path) / "escalations.json"),
         operator_channel="ops",
