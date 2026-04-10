@@ -17,12 +17,19 @@ class DesktopPerceptionEngine:
         context = context or CaptureContext()
         results: list[PerceptionResult] = []
 
-        for provider in self._providers:
-            result = provider.capture(context)
-            results.append(result)
+        import threading
 
-            if self._stop_on_first_success and result.succeeded and result.confidence > 0:
+        threads = []
+        for provider in self._providers:
+            if self._stop_on_first_success and results and any(r.succeeded for r in results):
                 break
+
+            t = threading.Thread(target=lambda p=provider: results.append(p.capture(context)))
+            threads.append(t)
+            t.start()
+
+        for t in threads:
+            t.join()
 
         return DesktopState(
             captured_at=datetime.now(timezone.utc),

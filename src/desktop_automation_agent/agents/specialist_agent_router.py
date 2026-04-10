@@ -112,7 +112,7 @@ class SpecialistAgentRouter:
         subtask: OrchestratorSubtask,
     ) -> tuple[SpecialistAgentRecord, str] | None:
         best_match: tuple[int, SpecialistAgentRecord, str] | None = None
-        target_text = f"{subtask.responsible_module} {subtask.description}".casefold()
+        target_text = f"{subtask.responsible_module or ''} {subtask.description or ''}".casefold()
         for agent in self._registry.values():
             for capability in agent.capabilities:
                 if capability.casefold() in target_text:
