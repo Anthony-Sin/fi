@@ -65,6 +65,8 @@ def make_element(name, role, bounds=(10, 10, 50, 50), text=None):
 
 
 def test_application_launcher_launches_registered_executable_and_verifies_signature(tmp_path):
+    """Verifies that the launcher can start a registered executable and correctly wait until
+    it identifies the expected application window by its title."""
     registry = ApplicationRegistry(str(tmp_path / "apps.json"))
     registry.upsert_application(
         KnownApplicationRecord(
@@ -102,6 +104,8 @@ def test_application_launcher_launches_registered_executable_and_verifies_signat
 
 
 def test_application_launcher_supports_start_menu_launch_and_ui_element_verification(tmp_path):
+    """Verifies that the launcher can trigger an application via the Windows Start Menu
+    and confirm it has started by locating a specific UI element using accessibility APIs."""
     registry = ApplicationRegistry(str(tmp_path / "apps.json"))
     record = KnownApplicationRecord(
         name="calc",
@@ -136,6 +140,8 @@ def test_application_launcher_supports_start_menu_launch_and_ui_element_verifica
 
 
 def test_application_launcher_supports_url_launch_with_parameters(tmp_path):
+    """Verifies that the launcher can construct and launch a URL with dynamically injected
+    query parameters (e.g., workspace IDs or modes)."""
     registry = ApplicationRegistry(str(tmp_path / "apps.json"))
     launcher = ApplicationLauncher(
         registry=registry,
@@ -159,6 +165,8 @@ def test_application_launcher_supports_url_launch_with_parameters(tmp_path):
 
 
 def test_application_launcher_retries_then_escalates_on_failure(tmp_path):
+    """Verifies that if an application fails to launch or verify its signature, the launcher
+    attempts the specified number of retries before escalating the failure."""
     registry = ApplicationRegistry(str(tmp_path / "apps.json"))
     registry.upsert_application(
         KnownApplicationRecord(
@@ -192,6 +200,8 @@ def test_application_launcher_retries_then_escalates_on_failure(tmp_path):
 
 
 def test_application_registry_persists_known_applications(tmp_path):
+    """Verifies that the application registry correctly saves application configuration data
+    to disk and can restore it accurately upon re-initialization."""
     registry = ApplicationRegistry(str(tmp_path / "apps.json"))
     registry.upsert_application(
         KnownApplicationRecord(
@@ -213,6 +223,8 @@ def test_application_registry_persists_known_applications(tmp_path):
 
 
 def test_application_launcher_blocks_disallowed_launch_targets(tmp_path):
+    """Verifies that the launcher consults the ActionAllowlistEnforcer and blocks any
+    launch requests that target applications or URLs not present in the security allowlist."""
     allowlist_path = tmp_path / "allowlist.json"
     allowlist_path.write_text(
         '{"action_types":["launch_application"],"applications":["notes"],"urls":["https://safe.example/*"],"file_paths":["C:/safe/*"]}',

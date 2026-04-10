@@ -3,6 +3,8 @@ from desktop_automation_agent.orchestrator_agent_core import OrchestratorAgentCo
 
 
 def test_orchestrator_agent_decomposes_task_into_ordered_subtasks():
+    """Verifies that the orchestrator can break down a complex natural language prompt
+    into a sequence of dependent subtasks with correct ordering."""
     agent = OrchestratorAgentCore()
 
     plan = agent.create_plan("Open ChatGPT, then submit a prompt, then verify the response.")
@@ -14,6 +16,8 @@ def test_orchestrator_agent_decomposes_task_into_ordered_subtasks():
 
 
 def test_orchestrator_agent_assigns_responsible_modules_by_subtask_type():
+    """Verifies that the orchestrator correctly maps different types of subtasks (launching,
+    filling forms, navigating menus) to their appropriate specialist modules."""
     agent = OrchestratorAgentCore()
 
     plan = agent.create_plan("Launch the app, then fill the form, then open the menu dialog.")
@@ -23,6 +27,8 @@ def test_orchestrator_agent_assigns_responsible_modules_by_subtask_type():
 
 
 def test_orchestrator_agent_tracks_completion_and_final_outputs():
+    """Verifies that the orchestrator correctly executes a multi-step plan, tracking which
+    subtasks have completed and aggregating their outputs into a final result set."""
     agent = OrchestratorAgentCore()
     plan = agent.create_plan("Open ChatGPT then submit a prompt")
 
@@ -38,6 +44,8 @@ def test_orchestrator_agent_tracks_completion_and_final_outputs():
 
 
 def test_orchestrator_agent_reroutes_dependents_after_partial_failure():
+    """Verifies that if a subtask fails, the orchestrator identifies dependent subtasks and
+    automatically reroutes them to a designated fallback module (e.g., manual human review)."""
     agent = OrchestratorAgentCore(fallback_module="manual_ops")
     plan = agent.create_plan("Open ChatGPT then submit a prompt then verify response")
 
@@ -55,6 +63,8 @@ def test_orchestrator_agent_reroutes_dependents_after_partial_failure():
 
 
 def test_orchestrator_agent_accepts_prebuilt_subtask_results_from_executor():
+    """Verifies that the orchestrator correctly integrates pre-packaged OrchestratorSubtaskResult
+    objects returned by an execution callback, including custom outputs."""
     agent = OrchestratorAgentCore()
     plan = agent.create_plan("Navigate and verify")
 
