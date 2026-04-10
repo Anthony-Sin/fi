@@ -201,10 +201,17 @@ class ApplicationLauncher:
     ) -> ApplicationLaunchResult:
         application = self._resolve_application(request)
         if application is None:
+            # GUI Fallback if app not in registry
+            if self.launch_via_gui(request.application_name):
+                return ApplicationLaunchResult(
+                    succeeded=True,
+                    status=ApplicationLaunchStatus.STARTED,
+                    launched_command=("gui-fallback", request.application_name)
+                )
             return ApplicationLaunchResult(
                 succeeded=False,
                 status=ApplicationLaunchStatus.FAILED,
-                reason="Application is not registered and the launch request is incomplete.",
+                reason="Application is not registered and GUI fallback failed.",
             )
         allowlist_result = self._allow(request=request, application=application, workflow_id=workflow_id, step_name=step_name)
         if allowlist_result is not None:
@@ -355,6 +362,23 @@ class ApplicationLauncher:
             return (launched, command, None if launched else "URL launch failed.")
 
         return (False, (), "Unsupported application launch mode.")
+
+    def launch_via_gui(self, query: str) -> bool:
+        """Fallback to GUI-based launching (Win+R) if registration or subprocess fails."""
+        import pyautogui
+        import time
+        try:
+            # Clear any existing text in Win+R dialog
+            pyautogui.hotkey("win", "r")
+            time.sleep(0.5)
+            # Ensure the dialog is focused and clean
+            pyautogui.hotkey("ctrl", "a")
+            pyautogui.press("backspace")
+            pyautogui.write(query, interval=0.01)
+            pyautogui.press("enter")
+            return True
+        except Exception:
+            return False
 
     def _wait_for_startup_signature(
         self,

@@ -234,7 +234,7 @@ class HierarchicalTaskDecomposer:
 
     def _infer_module(self, description: str) -> str:
         normalized = description.casefold()
-        if any(token in normalized for token in ("launch", "open", "start app", "browser")):
+        if any(token in normalized for token in ("launch", "open", "start app", "browser", "go to", "navigate to")):
             return "application_launcher"
         if any(token in normalized for token in ("account", "login", "profile", "credential", "session")):
             return "account_rotation_orchestrator"
