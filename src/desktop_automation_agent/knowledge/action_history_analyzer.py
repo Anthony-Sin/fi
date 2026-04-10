@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from statistics import mean
@@ -19,6 +20,9 @@ from desktop_automation_agent.models import (
     RetryFailureResult,
     WorkflowStepResult,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -222,12 +226,12 @@ class ActionHistoryAnalyzer:
         return list(deduped.values())
 
     def _action_type_name(self, log: ActionLogEntry) -> str:
-        return log.action.action_type.value
+        return str(log.action.action_type.value)
 
     def _infer_retry_step_type(self, failure: RetryFailureResult) -> str:
         first_attempt = next(iter(failure.attempts), None)
         if first_attempt is None:
             return "unknown"
         if first_attempt.exception_type is not None:
-            return first_attempt.exception_type
+            return str(first_attempt.exception_type)
         return "unknown"

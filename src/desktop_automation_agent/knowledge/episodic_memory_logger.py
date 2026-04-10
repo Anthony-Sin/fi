@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections import Counter
 from dataclasses import dataclass
@@ -10,6 +11,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from .exceptions import ConfigurationError
 from desktop_automation_agent.models import (
     AutomationEpisode,
     EpisodicMemoryResult,
@@ -17,9 +19,23 @@ from desktop_automation_agent.models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class EpisodicMemoryLogger:
     storage_path: str
+
+    def __post_init__(self) -> None:
+        """Validate the episodic memory file is well-formed on startup."""
+        try:
+            self._load_snapshot()
+        except ConfigurationError as e:
+            logger.error(f"Failed to initialize EpisodicMemoryLogger: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during EpisodicMemoryLogger initialization: {e}")
+            raise ConfigurationError(f"Unexpected error during initialization: {e}") from e
 
     def log_episode(
         self,
@@ -72,6 +88,8 @@ class EpisodicMemoryLogger:
                 succeeded=succeeded,
             )
         ]
+        if not episodes:
+            logger.warning(f"No episodes found matching task_type={task_type}, application={application}, succeeded={succeeded}")
         return EpisodicMemoryResult(succeeded=True, episodes=episodes)
 
     def retrieve_relevant_episodes(
@@ -187,7 +205,15 @@ class EpisodicMemoryLogger:
         path = Path(self.storage_path)
         if not path.exists():
             return []
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            logger.error(f"Malformed JSON in episodic memory at {self.storage_path}: {e}")
+            raise ConfigurationError(f"Malformed JSON in episodic memory: {e}") from e
+
+        if not isinstance(payload, dict):
+            raise ConfigurationError(f"Episodic memory payload must be a JSON object, got {type(payload).__name__}")
+
         return [self._deserialize_episode(item) for item in payload.get("episodes", [])]
 
     def _save_snapshot(self, snapshot: list[AutomationEpisode]) -> None:
@@ -212,16 +238,24 @@ class EpisodicMemoryLogger:
         }
 
     def _deserialize_episode(self, payload: dict[str, Any]) -> AutomationEpisode:
-        return AutomationEpisode(
-            episode_id=payload["episode_id"],
-            task_description=payload["task_description"],
-            task_type=payload["task_type"],
-            applications=list(payload.get("applications", [])),
-            steps_executed=list(payload.get("steps_executed", [])),
-            outcomes=list(payload.get("outcomes", [])),
-            errors_encountered=list(payload.get("errors_encountered", [])),
-            recovery_actions_taken=list(payload.get("recovery_actions_taken", [])),
-            total_duration_seconds=float(payload.get("total_duration_seconds", 0.0)),
-            succeeded=bool(payload.get("succeeded", False)),
-            timestamp=datetime.fromisoformat(payload["timestamp"]),
-        )
+        required_fields = ("episode_id", "task_description", "task_type", "timestamp")
+        for field in required_fields:
+            if field not in payload:
+                raise ConfigurationError(f"Missing required field '{field}' in episode payload")
+
+        try:
+            return AutomationEpisode(
+                episode_id=str(payload["episode_id"]),
+                task_description=str(payload["task_description"]),
+                task_type=str(payload["task_type"]),
+                applications=list(payload.get("applications", [])),
+                steps_executed=list(payload.get("steps_executed", [])),
+                outcomes=list(payload.get("outcomes", [])),
+                errors_encountered=list(payload.get("errors_encountered", [])),
+                recovery_actions_taken=list(payload.get("recovery_actions_taken", [])),
+                total_duration_seconds=float(payload.get("total_duration_seconds", 0.0)),
+                succeeded=bool(payload.get("succeeded", False)),
+                timestamp=datetime.fromisoformat(payload["timestamp"]),
+            )
+        except (ValueError, TypeError) as e:
+            raise ConfigurationError(f"Malformed episode record for '{payload.get('episode_id', 'unknown')}': {e}") from e
