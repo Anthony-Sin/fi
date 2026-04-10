@@ -5,6 +5,7 @@ from desktop_automation_agent._time import utc_now
 import hashlib
 import hmac
 import json
+import logging
 from dataclasses import asdict, dataclass, is_dataclass
 from datetime import datetime
 from pathlib import Path
@@ -31,6 +32,9 @@ from desktop_automation_agent.models import (
     VaultCredentialAccessEvent,
     WorkflowAuditLogEntry,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)

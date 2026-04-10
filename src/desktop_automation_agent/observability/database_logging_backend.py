@@ -3,6 +3,7 @@
 from desktop_automation_agent._time import utc_now
 
 import json
+import logging
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -27,6 +28,9 @@ from desktop_automation_agent.models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class SQLiteConnectionPool:
     database_path: str
@@ -41,7 +45,8 @@ class SQLiteConnectionPool:
 
     def acquire(self):
         if self._pool is None:
-            raise RuntimeError("Connection pool is closed.")
+            logger.warning("Attempted to acquire from a closed connection pool.")
+            return None
         return self._pool.get()
 
     def release(self, connection) -> None:
@@ -151,6 +156,8 @@ class DatabaseLoggingBackend:
         record: DatabaseStepRecord | None = None,
     ) -> DatabaseLoggingResult:
         resolved = record or self._step_record_from_result(workflow_id, step_result)
+        if resolved is None:
+            return DatabaseLoggingResult(succeeded=False, reason="Missing step result data.")
         payload = self._serialize_step(resolved)
         result = self._write_or_buffer(
             operation_type=DatabaseLogOperationType.INSERT_STEP,
@@ -202,6 +209,8 @@ class DatabaseLoggingBackend:
         record: DatabaseCheckpointRecord | None = None,
     ) -> DatabaseLoggingResult:
         resolved = record or self._checkpoint_record_from_checkpoint(checkpoint)
+        if resolved is None:
+            return DatabaseLoggingResult(succeeded=False, reason="Missing checkpoint data.")
         payload = self._serialize_checkpoint(resolved)
         result = self._write_or_buffer(
             operation_type=DatabaseLogOperationType.INSERT_CHECKPOINT,
@@ -394,22 +403,30 @@ class DatabaseLoggingBackend:
 
     def _execute_write(self, writer: Callable[[Any], Any]) -> DatabaseLoggingResult:
         connection = self.connection_pool.acquire()
+        if connection is None:
+            return DatabaseLoggingResult(succeeded=False, reason="Could not acquire database connection.")
         try:
             cursor = connection.cursor()
             writer(cursor)
             connection.commit()
             return DatabaseLoggingResult(succeeded=True)
-        except Exception:
+        except Exception as e:
             connection.rollback()
-            raise
+            logger.warning(f"Database write operation failed: {e}")
+            return DatabaseLoggingResult(succeeded=False, reason=str(e))
         finally:
             self.connection_pool.release(connection)
 
     def _execute_read(self, reader: Callable[[Any], DatabaseLoggingSnapshot]) -> DatabaseLoggingSnapshot:
         connection = self.connection_pool.acquire()
+        if connection is None:
+            return DatabaseLoggingSnapshot()
         try:
             cursor = connection.cursor()
             return reader(cursor)
+        except Exception as e:
+            logger.warning(f"Database read operation failed: {e}")
+            return DatabaseLoggingSnapshot()
         finally:
             self.connection_pool.release(connection)
 
@@ -644,7 +661,7 @@ class DatabaseLoggingBackend:
                 )
             )
             return
-        raise ValueError(f"Unsupported buffered operation type: {operation.operation_type}")
+        logger.warning(f"Unsupported buffered operation type: {operation.operation_type}")
 
     def _load_buffered_operations(self) -> list[DatabaseBufferedOperation]:
         path = Path(self.buffer_path)
@@ -900,9 +917,10 @@ class DatabaseLoggingBackend:
             recorded_at=datetime.fromisoformat(row["recorded_at"]),
         )
 
-    def _step_record_from_result(self, workflow_id: str, step_result: WorkflowStepResult | None) -> DatabaseStepRecord:
+    def _step_record_from_result(self, workflow_id: str, step_result: WorkflowStepResult | None) -> DatabaseStepRecord | None:
         if step_result is None:
-            raise ValueError("step_result or record is required.")
+            logger.warning("step_result or record is required for database logging.")
+            return None
         payload: dict[str, Any] = {"dry_run": step_result.dry_run}
         if step_result.context_snapshot is not None:
             payload["context_snapshot"] = {
@@ -923,9 +941,10 @@ class DatabaseLoggingBackend:
             recorded_at=self.now_fn(),
         )
 
-    def _checkpoint_record_from_checkpoint(self, checkpoint: WorkflowCheckpoint | None) -> DatabaseCheckpointRecord:
+    def _checkpoint_record_from_checkpoint(self, checkpoint: WorkflowCheckpoint | None) -> DatabaseCheckpointRecord | None:
         if checkpoint is None:
-            raise ValueError("checkpoint or record is required.")
+            logger.warning("checkpoint or record is required for database logging.")
+            return None
         return DatabaseCheckpointRecord(
             workflow_id=checkpoint.workflow_id,
             step_index=checkpoint.step_index,

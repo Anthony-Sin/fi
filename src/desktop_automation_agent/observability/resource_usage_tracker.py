@@ -3,6 +3,7 @@
 from desktop_automation_agent._time import utc_now
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -17,6 +18,9 @@ from desktop_automation_agent.models import (
     ResourceUsageTrendReport,
     ResourceUsageTrendSnapshot,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -276,14 +280,21 @@ class ResourceUsageTracker:
         path = Path(self.storage_path)
         if not path.exists():
             return {"runs": []}
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        payload.setdefault("runs", [])
-        return payload
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            payload.setdefault("runs", [])
+            return payload
+        except (json.JSONDecodeError, Exception) as e:
+            logger.warning(f"Failed to load resource usage from {self.storage_path}: {e}")
+            return {"runs": []}
 
     def _save_payload(self, payload: dict) -> None:
-        path = Path(self.storage_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        try:
+            path = Path(self.storage_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to save resource usage to {self.storage_path}: {e}")
 
     def _serialize_run(self, run: ResourceUsageRunRecord) -> dict:
         return {

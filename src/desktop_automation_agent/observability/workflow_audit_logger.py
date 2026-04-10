@@ -4,6 +4,7 @@ from desktop_automation_agent._time import utc_now
 
 import csv
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -15,6 +16,9 @@ from desktop_automation_agent.models import (
     WorkflowAuditQuery,
     WorkflowAuditResult,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -76,12 +80,18 @@ class WorkflowAuditLogger:
         if not path.exists():
             return []
         entries: list[WorkflowAuditLogEntry] = []
-        with path.open("r", encoding="utf-8") as handle:
-            for line in handle:
-                normalized = line.strip()
-                if not normalized:
-                    continue
-                entries.append(self._deserialize_entry(json.loads(normalized)))
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                for line in handle:
+                    normalized = line.strip()
+                    if not normalized:
+                        continue
+                    try:
+                        entries.append(self._deserialize_entry(json.loads(normalized)))
+                    except (json.JSONDecodeError, KeyError, ValueError) as e:
+                        logger.warning(f"Skipping malformed audit entry in {self.storage_path}: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to read audit logs from {self.storage_path}: {e}")
         return entries
 
     def export_json(
@@ -139,11 +149,14 @@ class WorkflowAuditLogger:
         return WorkflowAuditResult(succeeded=True, entries=entries, export_path=str(path))
 
     def _append_entry(self, entry: WorkflowAuditLogEntry) -> None:
-        path = Path(self.storage_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(self._serialize_entry(entry), sort_keys=True))
-            handle.write("\n")
+        try:
+            path = Path(self.storage_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(self._serialize_entry(entry), sort_keys=True))
+                handle.write("\n")
+        except Exception as e:
+            logger.warning(f"Failed to append audit entry to {self.storage_path}: {e}")
 
     def _matches_query(
         self,

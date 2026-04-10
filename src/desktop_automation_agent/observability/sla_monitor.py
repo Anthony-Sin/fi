@@ -3,6 +3,7 @@
 from desktop_automation_agent._time import utc_now
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -19,6 +20,9 @@ from desktop_automation_agent.models import (
     SLASlowestStepContribution,
     SLAWorkflowConfiguration,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -349,12 +353,19 @@ class SLAMonitor:
         path = Path(self.storage_path)
         if not path.exists():
             return {"configurations": [], "runs": [], "alerts": []}
-        return json.loads(path.read_text(encoding="utf-8"))
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, Exception) as e:
+            logger.warning(f"Failed to load SLA data from {self.storage_path}: {e}")
+            return {"configurations": [], "runs": [], "alerts": []}
 
     def _save_payload(self, payload: dict) -> None:
-        path = Path(self.storage_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        try:
+            path = Path(self.storage_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to save SLA data to {self.storage_path}: {e}")
 
     def _deserialize_configurations(self, payloads: list[dict]) -> list[SLAWorkflowConfiguration]:
         return [

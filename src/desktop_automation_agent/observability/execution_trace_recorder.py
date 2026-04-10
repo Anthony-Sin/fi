@@ -5,6 +5,7 @@ from desktop_automation_agent._time import utc_now
 import json
 import shutil
 import zipfile
+import logging
 from dataclasses import dataclass, field, fields, is_dataclass
 from datetime import datetime
 from enum import Enum
@@ -25,6 +26,9 @@ from desktop_automation_agent.models import (
     WorkflowContext,
     WorkflowStepResult,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -81,6 +85,10 @@ class ExecutionTraceRecorder:
         capture_post_screenshot: bool = False,
         metadata: dict[str, Any] | None = None,
     ) -> ExecutionTraceResult:
+        trace = self._require_trace(trace_id)
+        if trace is None:
+            return ExecutionTraceResult(succeeded=False, reason=f"Unknown trace id: {trace_id}")
+
         payload = {
             "pre_state": self._serialize_value(pre_state),
             "post_state": self._serialize_value(post_state),
@@ -108,6 +116,10 @@ class ExecutionTraceRecorder:
         capture_screenshot: bool = True,
         metadata: dict[str, Any] | None = None,
     ) -> ExecutionTraceResult:
+        trace = self._require_trace(trace_id)
+        if trace is None:
+            return ExecutionTraceResult(succeeded=False, reason=f"Unknown trace id: {trace_id}")
+
         attached_screenshot = self._prepare_screenshot(trace_id, "perception", screenshot_path, capture_screenshot)
         payload = {
             "perception_results": self._serialize_value(perception_results),
@@ -133,6 +145,10 @@ class ExecutionTraceRecorder:
         selected_action: ActionLogEntry | dict[str, Any] | None = None,
         rationale: dict[str, Any] | None = None,
     ) -> ExecutionTraceResult:
+        trace = self._require_trace(trace_id)
+        if trace is None:
+            return ExecutionTraceResult(succeeded=False, reason=f"Unknown trace id: {trace_id}")
+
         payload = {
             "decision_summary": decision_summary,
             "candidate_actions": self._serialize_value(candidate_actions or []),
@@ -162,6 +178,10 @@ class ExecutionTraceRecorder:
         capture_post_screenshot: bool = False,
         metadata: dict[str, Any] | None = None,
     ) -> ExecutionTraceResult:
+        trace = self._require_trace(trace_id)
+        if trace is None:
+            return ExecutionTraceResult(succeeded=False, reason=f"Unknown trace id: {trace_id}")
+
         payload = {
             "action": self._serialize_value(action),
             "pre_state": self._serialize_value(pre_state),
@@ -191,6 +211,10 @@ class ExecutionTraceRecorder:
         workflow_data: dict[str, Any] | None = None,
         screen_observations: dict[str, Any] | None = None,
     ) -> ExecutionTraceResult:
+        trace = self._require_trace(trace_id)
+        if trace is None:
+            return ExecutionTraceResult(succeeded=False, reason=f"Unknown trace id: {trace_id}")
+
         payload = {
             "selected_branch": selected_branch,
             "records": self._serialize_value(records or []),
@@ -215,6 +239,10 @@ class ExecutionTraceRecorder:
         decision_record: HumanReviewDecisionRecord | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> ExecutionTraceResult:
+        trace = self._require_trace(trace_id)
+        if trace is None:
+            return ExecutionTraceResult(succeeded=False, reason=f"Unknown trace id: {trace_id}")
+
         payload = {
             "pending_item": self._serialize_value(pending_item),
             "decision_record": self._serialize_value(decision_record),
@@ -238,6 +266,9 @@ class ExecutionTraceRecorder:
         archive: bool = True,
     ) -> ExecutionTraceResult:
         trace = self._require_trace(trace_id)
+        if trace is None:
+            return ExecutionTraceResult(succeeded=False, reason=f"Unknown trace id: {trace_id}")
+
         trace.completed_at = utc_now()
         trace.succeeded = succeeded
         trace.final_outcome = final_outcome
@@ -265,6 +296,9 @@ class ExecutionTraceRecorder:
 
     def archive_trace(self, trace_id: str) -> ExecutionTraceResult:
         trace = self._require_trace(trace_id)
+        if trace is None:
+            return ExecutionTraceResult(succeeded=False, reason=f"Unknown trace id: {trace_id}")
+
         trace_dir = self._trace_directory(trace.trace_id)
         archive_dir = Path(self.archive_directory or self.storage_directory)
         archive_dir.mkdir(parents=True, exist_ok=True)
@@ -323,6 +357,9 @@ class ExecutionTraceRecorder:
         screenshot_path: str | None = None,
     ) -> ExecutionTraceResult:
         trace = self._require_trace(trace_id)
+        if trace is None:
+            return ExecutionTraceResult(succeeded=False, reason=f"Unknown trace id: {trace_id}")
+
         event = ExecutionTraceEvent(
             sequence_number=len(trace.events) + 1,
             timestamp=utc_now(),
@@ -342,10 +379,13 @@ class ExecutionTraceRecorder:
         )
 
     def _persist_trace(self, trace: ExecutionTraceRecord) -> None:
-        manifest_path = Path(trace.manifest_path or self._trace_directory(trace.trace_id) / "trace.json")
-        manifest_path.parent.mkdir(parents=True, exist_ok=True)
-        manifest_path.write_text(json.dumps(self._serialize_trace(trace), indent=2, sort_keys=True), encoding="utf-8")
-        trace.manifest_path = str(manifest_path)
+        try:
+            manifest_path = Path(trace.manifest_path or self._trace_directory(trace.trace_id) / "trace.json")
+            manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            manifest_path.write_text(json.dumps(self._serialize_trace(trace), indent=2, sort_keys=True), encoding="utf-8")
+            trace.manifest_path = str(manifest_path)
+        except Exception as e:
+            logger.warning(f"Failed to persist trace {trace.trace_id}: {e}")
 
     def _prepare_screenshot(
         self,
@@ -378,10 +418,11 @@ class ExecutionTraceRecorder:
     def _trace_directory(self, trace_id: str) -> Path:
         return Path(self.storage_directory) / trace_id
 
-    def _require_trace(self, trace_id: str) -> ExecutionTraceRecord:
+    def _require_trace(self, trace_id: str) -> ExecutionTraceRecord | None:
         trace = self._active_traces.get(trace_id)
         if trace is None:
-            raise ValueError(f"Unknown trace id: {trace_id}")
+            logger.warning(f"Unknown trace id: {trace_id}")
+            return None
         return trace
 
     def _serialize_trace(self, trace: ExecutionTraceRecord) -> dict[str, Any]:
