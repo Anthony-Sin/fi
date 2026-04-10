@@ -6,16 +6,16 @@ import time
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 try:
-    from desktop_automation_agent import DesktopAutomationAgent
+    from desktop_automation_agent import create_agent
 except ImportError:
     # Fallback for different execution contexts
-    from src.desktop_automation_agent import DesktopAutomationAgent
+    from src.desktop_automation_agent import create_agent
 
 def main():
-    print("--- DEKTOP AUTOMATION AGENT v3.1 ---")
+    print("--- DESKTOP AUTOMATION AGENT v3.1 ---")
     print("Initializing core brain...")
 
-    agent = DesktopAutomationAgent()
+    agent = create_agent()
 
     print("Launching Cyberpunk Interactive Dashboard...")
     agent.run_interactive()

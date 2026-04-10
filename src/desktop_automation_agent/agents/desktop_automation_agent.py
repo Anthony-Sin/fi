@@ -125,6 +125,9 @@ class DesktopAutomationAgent:
             self.overlay.update_subtask_status(subtask.subtask_id, status)
             return res
 
+        start_tokens = self.total_tokens
+        start_cost = self.total_cost
+
         result = self.orchestrator.execute_plan(plan, executor=monitored_executor)
 
         history_entry = {
@@ -132,8 +135,8 @@ class DesktopAutomationAgent:
             "command": task_description,
             "succeeded": result.succeeded,
             "reason": result.reason,
-            "tokens": 150 * len(plan.subtasks), # rough estimate for history
-            "cost": 150 * len(plan.subtasks) * (0.0000001 if "lite" in self.selected_model.lower() else 0.0000005)
+            "tokens": self.total_tokens - start_tokens,
+            "cost": self.total_cost - start_cost
         }
         self.command_history.append(history_entry)
         self.overlay.add_history_entry(history_entry)
@@ -192,7 +195,7 @@ class DesktopAutomationAgent:
         from desktop_automation_agent.ai.gemini_provider import GeminiProvider
 
         self.overlay.update_status(f"AI solving: {subtask.subtask_id}")
-        ai = GeminiProvider(api_key=self.api_key, model_name=self.selected_model)
+        ai = self._ai_provider or GeminiProvider(api_key=self.api_key, model_name=self.selected_model)
 
         # Capture screen for context
         try:
@@ -207,9 +210,11 @@ class DesktopAutomationAgent:
             f"You are a desktop automation assistant. Your current subtask is: '{subtask.description}'. "
             "The user wants you to execute this task on their desktop. "
             "Analyze the provided screenshot and determine the exact steps to take. "
-            "Then, use your internal tools (simulated here) to fulfill the request. "
-            "Return a JSON response with: "
-            "{ \"succeeded\": true/false, \"summary\": \"what you did\", \"reason\": \"if failed\" }"
+            "Return a JSON response with a list of actions to perform. "
+            "Supported actions: click(x, y), type(text), hotkey(k1, k2), wait(seconds). "
+            "Example response format: "
+            "{ \"succeeded\": true, \"actions\": [{\"type\": \"click\", \"x\": 100, \"y\": 200}, {\"type\": \"type\", \"text\": \"hello\"}], \"summary\": \"Clicked and typed hello\" }"
+            "If the task cannot be done, set succeeded to false and provide a reason."
         )
 
         try:
@@ -221,6 +226,10 @@ class DesktopAutomationAgent:
             if match:
                 res_data = json.loads(match.group())
                 succeeded = res_data.get("succeeded", True)
+
+                if succeeded and "actions" in res_data:
+                    self._execute_ai_actions(res_data["actions"])
+
                 return OrchestratorSubtaskResult(
                     subtask_id=subtask.subtask_id,
                     status=OrchestratorSubtaskStatus.COMPLETED if succeeded else OrchestratorSubtaskStatus.FAILED,
@@ -242,6 +251,82 @@ class DesktopAutomationAgent:
             responsible_module="ai_vision_fallback",
             reason="AI fallback could not determine a solution."
         )
+
+    def _execute_ai_actions(self, actions: List[Dict[str, Any]]):
+        """Executes a list of actions returned by Gemini."""
+        import pyautogui
+        import time
+
+        for action in actions:
+            if self._stop_requested: break
+
+            action_type = action.get("type")
+            try:
+                if action_type == "click":
+                    pyautogui.click(x=action.get("x"), y=action.get("y"))
+                elif action_type == "type":
+                    pyautogui.write(action.get("text"))
+                elif action_type == "hotkey":
+                    keys = action.get("keys", [])
+                    if keys: pyautogui.hotkey(*keys)
+                elif action_type == "wait":
+                    time.sleep(float(action.get("seconds", 1.0)))
+            except Exception as e:
+                print(f"DEBUG: AI Action failed: {e}")
+
+    def _translate_instruction_to_request(self, module_name: str, instruction: str) -> Dict[str, Any]:
+        """Uses Gemini to translate a natural language instruction into structured data for a specialist."""
+        if not self.api_key or not self._ai_provider:
+             # Fallback to simple description if no AI is available
+             if module_name == "ai_interface_navigator": return {"prompt": instruction}
+             if module_name == "application_launcher":
+                 from desktop_automation_agent.models import ApplicationLaunchRequest, ApplicationLaunchMode
+                 return {"request": ApplicationLaunchRequest(application_name=instruction, launch_mode=ApplicationLaunchMode.START_MENU)}
+             return {"instruction": instruction}
+
+        prompt = (
+            f"Translate the following desktop automation instruction for the '{module_name}' module into a JSON request.\n"
+            f"Instruction: '{instruction}'\n\n"
+            f"Module Schema Hints:\n"
+            "- application_launcher: { \"request\": { \"application_name\": \"...\", \"launch_mode\": \"start_menu/url/executable\" } }\n"
+            "- ai_interface_navigator: { \"prompt\": \"...\", \"interface\": null }\n"
+            "- form_automation: { \"fields\": [ { \"label\": \"...\", \"value\": \"...\" } ] }\n"
+            "- navigation_step_sequencer: { \"steps\": [ { \"action_type\": \"click/type/wait\", \"target_description\": \"...\" } ] }\n\n"
+            "Return ONLY the JSON object."
+        )
+
+        try:
+            response = self._ai_provider.generate_text(prompt)
+            import json, re
+            match = re.search(r"\{.*\}", response, re.DOTALL)
+            if match:
+                data = json.loads(match.group())
+                # Handle specific model conversions (like Enum strings to Enums)
+                if module_name == "application_launcher" and "request" in data:
+                    from desktop_automation_agent.models import ApplicationLaunchRequest, ApplicationLaunchMode
+                    req = data["request"]
+                    data["request"] = ApplicationLaunchRequest(
+                        application_name=req.get("application_name", instruction),
+                        launch_mode=ApplicationLaunchMode(req.get("launch_mode", "start_menu")),
+                        url=req.get("url"),
+                        executable_path=req.get("executable_path")
+                    )
+                if module_name == "form_automation" and "fields" in data:
+                    from desktop_automation_agent.models import FormFieldValue
+                    data["fields"] = [FormFieldValue(**f) for f in data["fields"]]
+                if module_name == "navigation_step_sequencer" and "steps" in data:
+                    from desktop_automation_agent.models import NavigationStep, NavigationStepActionType
+                    data["steps"] = [NavigationStep(
+                        step_id=f"step-{i}",
+                        action_type=NavigationStepActionType(s.get("action_type", "click")),
+                        target_description=s.get("target_description", ""),
+                        input_data=s.get("input_data", {})
+                    ) for i, s in enumerate(data["steps"])]
+                return data
+        except Exception as e:
+            print(f"DEBUG: Cognitive translation failed: {e}")
+
+        return {"instruction": instruction}
 
     def _dispatch_with_router(self, subtask: OrchestratorSubtask, context: Dict[str, str]) -> Any:
         """Internal executor that uses the router to find and invoke the correct specialist."""
@@ -288,21 +373,20 @@ class DesktopAutomationAgent:
             return self._solve_with_ai(subtask, context)
 
         try:
-            # The executor in OrchestratorAgentCore expects an object with 'succeeded' attribute or a dict.
-            # Most specialists in this library return a Result object with 'succeeded' and 'reason'.
-
-            # We try to pass subtask.description as the primary input.
-            # If the specialist is a complex object like MultiApplicationWorkflowCoordinator,
-            # it might expect list of WorkflowStep, which we don't have here from just a string.
-            # In a real integration, there would be an LLM-based step to convert description to structured objects.
+            # Cognitive Translation: Convert natural language to specialist request objects
+            request_data = self._translate_instruction_to_request(module_name, subtask.description)
 
             if module_name == "ai_interface_navigator" and hasattr(specialist, "navigate"):
-                 # AIInterfaceNavigator.navigate(prompt, interface, ...)
-                 # Here we'd ideally have the interface config.
-                 return specialist.navigate(prompt=subtask.description)
+                 return specialist.navigate(**request_data)
 
             if module_name == "application_launcher" and hasattr(specialist, "launch"):
-                 return specialist.launch(subtask.description)
+                 return specialist.launch(**request_data)
+
+            if module_name == "form_automation" and hasattr(specialist, "fill_form"):
+                 return specialist.fill_form(**request_data)
+
+            if module_name == "navigation_step_sequencer" and hasattr(specialist, "run"):
+                 return specialist.run(**request_data)
 
             if hasattr(specialist, "execute"):
                 return specialist.execute(subtask.description)

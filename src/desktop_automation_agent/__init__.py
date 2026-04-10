@@ -87,7 +87,7 @@ def create_agent() -> DesktopAutomationAgent:
         ocr_extractor=ocr_extractor,
         window_manager=window_manager
     )
-    agent.register_specialist("form_automation", form_automation, ["fill", "enter", "submit", "form"])
+    agent.register_specialist("form_automation", form_automation, ["fill", "enter", "submit", "form", "write"])
 
     # AI Interface Navigator
     clipboard_manager = ClipboardManager(backend=Win32ClipboardBackend())
