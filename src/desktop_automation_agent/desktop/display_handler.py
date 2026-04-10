@@ -4,9 +4,11 @@ from desktop_automation_agent._time import utc_now
 
 import ctypes
 import ctypes.wintypes
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from desktop_automation_agent.models import (
     DisplayConfigurationChangeResult,
@@ -17,18 +19,29 @@ from desktop_automation_agent.models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class PILVirtualDesktopCaptureBackend:
-    def capture(self, monitor: MonitorDescriptor | None = None):
-        from PIL import ImageGrab
+    def capture(self, monitor: MonitorDescriptor | None = None) -> Any | None:
+        try:
+            from PIL import ImageGrab
 
-        bbox = None if monitor is None else monitor.bounds
-        return ImageGrab.grab(bbox=bbox, all_screens=True)
+            bbox = None if monitor is None else monitor.bounds
+            return ImageGrab.grab(bbox=bbox, all_screens=True)
+        except Exception as e:
+            logger.warning(f"PIL capture failed: {e}")
+            return None
 
-    def save(self, image, path: str) -> str:
-        target = Path(path)
-        image.save(target)
-        return str(target)
+    def save(self, image: Any, path: str) -> str | None:
+        try:
+            target = Path(path)
+            image.save(target)
+            return str(target)
+        except Exception as e:
+            logger.warning(f"Failed to save image to {path}: {e}")
+            return None
 
 
 @dataclass(slots=True)
@@ -113,7 +126,8 @@ class MultiMonitorDisplayHandler:
         if monitor_id is not None:
             monitor = self.get_monitor(monitor_id)
             if monitor is None:
-                raise ValueError(f"Unknown monitor: {monitor_id}")
+                logger.warning(f"Unknown monitor: {monitor_id}")
+                return ScreenBounds(width=0, height=0)
             return self._bounds_to_screen_bounds(monitor.bounds)
 
         monitors = self.list_monitors()
@@ -164,14 +178,20 @@ class MultiMonitorDisplayHandler:
             )
         return DisplayConfigurationChangeResult(changed=False, baseline=baseline, current=current)
 
-    def capture_image(self, *, monitor_id: str | None = None):
+    def capture_image(self, *, monitor_id: str | None = None) -> Any | None:
         backend = self._require_capture_backend()
+        if backend is None:
+            return None
         monitor = self.get_monitor(monitor_id) if monitor_id is not None else None
         return backend.capture(monitor)
 
-    def capture_screenshot_to_path(self, path: str, *, monitor_id: str | None = None) -> str:
+    def capture_screenshot_to_path(self, path: str, *, monitor_id: str | None = None) -> str | None:
         backend = self._require_capture_backend()
+        if backend is None:
+            return None
         image = self.capture_image(monitor_id=monitor_id)
+        if image is None:
+            return None
         return backend.save(image, path)
 
     def move_window_to_monitor(self, handle: int, monitor_id: str) -> WindowOperationResult:
@@ -189,9 +209,10 @@ class MultiMonitorDisplayHandler:
             result.window.monitor_id = monitor.monitor_id
         return result
 
-    def _require_capture_backend(self):
+    def _require_capture_backend(self) -> Any | None:
         if self.capture_backend is None:
-            raise ValueError("A capture backend is required for screenshot operations.")
+            logger.warning("A capture backend is required for screenshot operations.")
+            return None
         return self.capture_backend
 
     def _compute_window_destination(

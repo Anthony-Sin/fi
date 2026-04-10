@@ -2,14 +2,19 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.wintypes
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from desktop_automation_agent.models import (
     ThemeDetectionResult,
     ThemeTemplateReferenceSet,
     UITheme,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -65,6 +70,13 @@ class ScreenBrightnessThemeHeuristic:
 
     def detect_theme(self) -> ThemeDetectionResult:
         image = self.capture_backend.capture()
+        if image is None:
+            return ThemeDetectionResult(
+                theme=UITheme.UNKNOWN,
+                detected_with="screen_heuristic",
+                confidence=0.0,
+                reason="Failed to capture screen for theme detection.",
+            )
         grayscale = image.convert("L").resize((64, 64))
         histogram = grayscale.histogram()
         total = float(sum(histogram)) or 1.0

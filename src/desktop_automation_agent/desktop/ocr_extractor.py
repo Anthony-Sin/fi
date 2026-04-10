@@ -1,35 +1,54 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from typing import Any
 
 from desktop_automation_agent.contracts import OCRBackend
 from desktop_automation_agent.models import OCRExtractionResult, OCRTextBlock, OCRTextMatchResult
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class TesseractOCRBackend:
-    def capture_screenshot(self, region: tuple[int, int, int, int] | None = None):
-        import pyautogui
+    def capture_screenshot(self, region: tuple[int, int, int, int] | None = None) -> Any | None:
+        try:
+            import pyautogui
 
-        if region is None:
-            return pyautogui.screenshot()
-        left, top, right, bottom = region
-        return pyautogui.screenshot(region=(left, top, right - left, bottom - top))
+            if region is None:
+                return pyautogui.screenshot()
+            left, top, right, bottom = region
+            return pyautogui.screenshot(region=(left, top, right - left, bottom - top))
+        except Exception as e:
+            logger.warning(f"OCR capture screenshot failed: {e}")
+            return None
 
-    def load_image(self, screenshot_path: str):
-        from PIL import Image
+    def load_image(self, screenshot_path: str) -> Any | None:
+        try:
+            from PIL import Image
 
-        return Image.open(screenshot_path)
+            return Image.open(screenshot_path)
+        except Exception as e:
+            logger.warning(f"OCR load image failed: {e}")
+            return None
 
-    def extract_blocks(self, image, language: str) -> list[OCRTextBlock]:
-        import pytesseract
+    def extract_blocks(self, image: Any, language: str) -> list[OCRTextBlock]:
+        if image is None:
+            return []
+        try:
+            import pytesseract
 
-        data = pytesseract.image_to_data(
-            image,
-            lang=language,
-            output_type=pytesseract.Output.DICT,
-        )
+            data = pytesseract.image_to_data(
+                image,
+                lang=language,
+                output_type=pytesseract.Output.DICT,
+            )
+        except Exception as e:
+            logger.warning(f"pytesseract extraction failed: {e}")
+            return []
         blocks: list[OCRTextBlock] = []
 
         for index, text in enumerate(data["text"]):
@@ -70,6 +89,12 @@ class OCRExtractor:
             if screenshot_path is not None
             else self.backend.capture_screenshot(region_of_interest)
         )
+        if image is None:
+            return OCRExtractionResult(
+                blocks=[],
+                language=language,
+                region_of_interest=region_of_interest,
+            )
         blocks = self.backend.extract_blocks(image, language)
         filtered = [
             self._offset_block(block, region_of_interest)
@@ -144,7 +169,7 @@ class OCRExtractor:
                             detail="Found via AI vision fallback."
                         )
             except Exception as e:
-                print(f"DEBUG: AI Fallback failed: {e}")
+                logger.warning(f"AI Fallback failed: {e}")
 
         return OCRTextMatchResult(
             succeeded=False,

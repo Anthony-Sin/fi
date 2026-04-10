@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -14,6 +15,9 @@ from desktop_automation_agent.models import (
     ClipboardVerificationResult,
     InputTarget,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -152,7 +156,9 @@ class ClipboardDataBridge:
             if isinstance(data, str):
                 return data
             return "\n".join(f"{key}: {self._format_value(value)}" for key, value in data.items())
-        raise ValueError(f"Unsupported clipboard bridge format: {data_format}")
+
+        logger.warning(f"Unsupported clipboard bridge format: {data_format}")
+        return data if isinstance(data, str) else str(data)
 
     def _format_value(self, value: Any) -> str:
         if isinstance(value, (dict, list)):

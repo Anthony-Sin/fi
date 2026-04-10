@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from desktop_automation_agent.contracts import ImageMatcherBackend
 from desktop_automation_agent.models import (
@@ -16,46 +18,77 @@ from desktop_automation_agent.models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class OpenCVImageMatcherBackend:
-    def load_image(self, path: str):
-        import cv2
+    def load_image(self, path: str) -> Any | None:
+        try:
+            import cv2
 
-        image = cv2.imread(path, cv2.IMREAD_COLOR)
-        if image is None:
-            raise FileNotFoundError(f"Unable to load image: {path}")
-        return image
+            image = cv2.imread(path, cv2.IMREAD_COLOR)
+            if image is None:
+                logger.warning(f"Unable to load image: {path}")
+            return image
+        except Exception as e:
+            logger.warning(f"Error loading image {path}: {e}")
+            return None
 
-    def load_screenshot(self, screenshot_path: str | None = None):
+    def load_screenshot(self, screenshot_path: str | None = None) -> Any | None:
         if screenshot_path is not None:
             return self.load_image(screenshot_path)
 
-        import cv2
-        import numpy
-        import pyautogui
+        try:
+            import cv2
+            import numpy
+            import pyautogui
 
-        screenshot = pyautogui.screenshot()
-        return cv2.cvtColor(numpy.array(screenshot), cv2.COLOR_RGB2BGR)
+            screenshot = pyautogui.screenshot()
+            return cv2.cvtColor(numpy.array(screenshot), cv2.COLOR_RGB2BGR)
+        except Exception as e:
+            logger.warning(f"Failed to capture screenshot with OpenCV: {e}")
+            return None
 
-    def crop_image(self, image, bounds: tuple[int, int, int, int]):
-        left, top, right, bottom = bounds
-        return image[top:bottom, left:right]
+    def crop_image(self, image: Any, bounds: tuple[int, int, int, int]) -> Any | None:
+        if image is None:
+            return None
+        try:
+            left, top, right, bottom = bounds
+            return image[top:bottom, left:right]
+        except Exception as e:
+            logger.warning(f"Failed to crop image: {e}")
+            return None
 
-    def save_image(self, image, path: str) -> None:
-        import cv2
+    def save_image(self, image: Any, path: str) -> bool:
+        if image is None:
+            return False
+        try:
+            import cv2
 
-        if not cv2.imwrite(path, image):
-            raise RuntimeError(f"Unable to save image to {path}")
+            if not cv2.imwrite(path, image):
+                logger.warning(f"Unable to save image to {path}")
+                return False
+            return True
+        except Exception as e:
+            logger.warning(f"Error saving image to {path}: {e}")
+            return False
 
-    def resize_image(self, image, scale_factor: float):
-        import cv2
-
+    def resize_image(self, image: Any, scale_factor: float) -> Any | None:
+        if image is None:
+            return None
         if scale_factor == 1.0:
             return image
-        width, height = self.get_image_size(image)
-        resized_width = max(1, int(round(width * scale_factor)))
-        resized_height = max(1, int(round(height * scale_factor)))
-        return cv2.resize(image, (resized_width, resized_height), interpolation=cv2.INTER_LINEAR)
+        try:
+            import cv2
+
+            width, height = self.get_image_size(image)
+            resized_width = max(1, int(round(width * scale_factor)))
+            resized_height = max(1, int(round(height * scale_factor)))
+            return cv2.resize(image, (resized_width, resized_height), interpolation=cv2.INTER_LINEAR)
+        except Exception as e:
+            logger.warning(f"Failed to resize image: {e}")
+            return image
 
     def get_image_size(self, image) -> tuple[int, int]:
         height, width = image.shape[:2]
@@ -133,12 +166,36 @@ class TemplateImageMatcher:
         requests: list[TemplateSearchRequest],
     ) -> list[TemplateSearchResult]:
         screenshot = self.backend.load_screenshot(screenshot_path)
+        if screenshot is None:
+            return [
+                TemplateSearchResult(
+                    template_name=request.template_name,
+                    matches=[],
+                    threshold=request.threshold,
+                    region_of_interest=request.region_of_interest,
+                    scale_factor=request.scale_factor,
+                )
+                for request in requests
+            ]
+
         results: list[TemplateSearchResult] = []
 
         for request in requests:
             prepared_request = self._prepare_request(request)
             resolved_template_path = self._resolve_template_path(prepared_request)
             template = self.backend.load_image(resolved_template_path)
+            if template is None:
+                results.append(
+                    TemplateSearchResult(
+                        template_name=prepared_request.template_name,
+                        matches=[],
+                        threshold=prepared_request.threshold,
+                        region_of_interest=prepared_request.region_of_interest,
+                        scale_factor=self._selected_scale_factor(prepared_request),
+                    )
+                )
+                continue
+
             matches = self._find_matches_for_request(
                 screenshot=screenshot,
                 template=template,
@@ -175,7 +232,12 @@ class TemplateImageMatcher:
         theme: UITheme | None = None,
     ) -> TemplateCaptureResult:
         screenshot = self.backend.load_screenshot(screenshot_path)
+        if screenshot is None:
+            return TemplateCaptureResult(succeeded=False, reason="Failed to load screenshot.")
+
         cropped = self.backend.crop_image(screenshot, bounds)
+        if cropped is None:
+            return TemplateCaptureResult(succeeded=False, reason="Failed to crop template image.")
 
         output_dir = Path(output_directory)
         selected_theme = theme or self._active_theme()
@@ -191,7 +253,9 @@ class TemplateImageMatcher:
         if self.coordinate_manager is not None:
             baseline_dpi = getattr(self.coordinate_manager.current_screen_bounds(), "dpi", 96)
 
-        self.backend.save_image(cropped, str(image_path))
+        if not self.backend.save_image(cropped, str(image_path)):
+            return TemplateCaptureResult(succeeded=False, reason=f"Failed to save template image to {image_path}")
+
         metadata = ReferenceTemplateMetadata(
             name=name,
             image_path=str(image_path),

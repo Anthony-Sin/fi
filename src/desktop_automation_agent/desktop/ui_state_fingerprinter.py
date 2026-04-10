@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import math
 from dataclasses import dataclass
+from typing import Any
 
 from desktop_automation_agent.contracts import ScreenCaptureBackend, UILandmarkProvider, WindowManager
 from desktop_automation_agent.models import UIStateFingerprint, UILandmark
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -22,6 +27,15 @@ class UIStateFingerprinter:
         region_of_interest: tuple[int, int, int, int] | None = None,
     ) -> UIStateFingerprint:
         image = self.capture_backend.capture(region_of_interest)
+        if image is None:
+            logger.warning("Capture failed during fingerprinting.")
+            return UIStateFingerprint(
+                window_title_hash="",
+                landmark_positions={},
+                pixel_histogram=(),
+                screen_size=(0, 0),
+                window_count=0,
+            )
         width, height = self._get_image_size(image)
         titles = self._extract_window_titles()
         landmarks = self._extract_landmark_positions(width=width, height=height)
@@ -84,8 +98,12 @@ class UIStateFingerprinter:
                 positions[landmark.name] = normalized
         return positions
 
-    def _build_histogram(self, image) -> tuple[float, ...]:
-        rgb_image = image.convert("RGB")
+    def _build_histogram(self, image: Any) -> tuple[float, ...]:
+        try:
+            rgb_image = image.convert("RGB")
+        except Exception as e:
+            logger.warning(f"Failed to convert image for histogram: {e}")
+            return ()
         if self.histogram_sample_size[0] > 0 and self.histogram_sample_size[1] > 0:
             rgb_image = rgb_image.resize(self.histogram_sample_size)
 

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from time import monotonic, sleep
-from typing import Callable
+from typing import Callable, Any
 
 from desktop_automation_agent.models import (
     AdaptiveTimingBaselineRecord,
@@ -28,6 +29,9 @@ class StartupTimingBenchmark:
     click_complete_check: Callable[[], bool] | None = None
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class AdaptiveTimingCalibrator:
     storage_path: str
@@ -37,7 +41,21 @@ class AdaptiveTimingCalibrator:
     _last_monotonic_value: float | None = None
 
     def calibrate_on_startup(self, benchmark: StartupTimingBenchmark) -> AdaptiveTimingCalibrationResult:
-        current = self._run_benchmark(benchmark)
+        try:
+            current = self._run_benchmark(benchmark)
+        except TimeoutError as e:
+            logger.warning(f"Startup calibration benchmark timed out: {e}")
+            return AdaptiveTimingCalibrationResult(
+                succeeded=False,
+                reason=f"Calibration benchmark timed out: {e}",
+            )
+        except Exception as e:
+            logger.warning(f"Startup calibration benchmark failed: {e}")
+            return AdaptiveTimingCalibrationResult(
+                succeeded=False,
+                reason=f"Calibration benchmark failed: {e}",
+            )
+
         baseline = self._load_baseline(benchmark.benchmark_id)
 
         if baseline is None:

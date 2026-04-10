@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from time import monotonic, sleep
-from typing import Callable
+from typing import Callable, Any
 
 from desktop_automation_agent.models import (
     AnimationCompletionSignal,
@@ -13,10 +14,13 @@ from desktop_automation_agent.models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class AnimationTransitionWaitModule:
-    capture_backend: object
-    difference_backend: object
+    capture_backend: Any
+    difference_backend: Any
     template_matcher: object | None = None
     ocr_extractor: object | None = None
     accessibility_reader: object | None = None
@@ -29,6 +33,18 @@ class AnimationTransitionWaitModule:
             request.region_of_interest,
             monitor_id=request.monitor_id,
         )
+        if previous_image is None:
+            return self._finalize(
+                request=request,
+                elapsed_seconds=0.0,
+                attempts=0,
+                succeeded=False,
+                detail="Initial screen capture failed.",
+                screenshot_path=None,
+                completed_signals=(),
+                last_change_rate=0.0,
+            )
+
         started_at = self.monotonic_fn()
         attempts = 0
         stable_frames = 0
@@ -43,7 +59,11 @@ class AnimationTransitionWaitModule:
                 request.region_of_interest,
                 monitor_id=request.monitor_id,
             )
-            last_change_rate = self.difference_backend.compute_difference(previous_image, current_image)
+            if current_image is None:
+                logger.warning("Capture failed during animation wait loop.")
+                last_change_rate = 0.0 # Assume no change if we can't see
+            else:
+                last_change_rate = self.difference_backend.compute_difference(previous_image, current_image)
             if last_change_rate <= request.settle_threshold:
                 stable_frames += 1
             else:

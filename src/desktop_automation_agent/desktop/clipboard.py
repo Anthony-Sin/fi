@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.wintypes
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from time import sleep
@@ -24,6 +25,9 @@ from desktop_automation_agent.models import (
 CF_UNICODETEXT = 13
 CF_DIB = 8
 GHND = 0x0042
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -80,61 +84,83 @@ class Win32ClipboardBackend:
         finally:
             user32.CloseClipboard()
 
-    def write_text(self, text: str, encoding: str = "utf-8") -> None:
-        normalized = self._normalize_text(text, encoding)
-        encoded = normalized.encode("utf-16-le") + b"\x00\x00"
-        self._open_and_clear()
-
-        kernel32 = ctypes.windll.kernel32
-        user32 = ctypes.windll.user32
-        handle = kernel32.GlobalAlloc(GHND, len(encoded))
-        if not handle:
-            user32.CloseClipboard()
-            raise RuntimeError("Failed to allocate clipboard memory.")
-
-        pointer = kernel32.GlobalLock(handle)
-        if not pointer:
-            kernel32.GlobalFree(handle)
-            user32.CloseClipboard()
-            raise RuntimeError("Failed to lock clipboard memory.")
-
+    def write_text(self, text: str, encoding: str = "utf-8") -> bool:
         try:
-            ctypes.memmove(pointer, encoded, len(encoded))
-        finally:
-            kernel32.GlobalUnlock(handle)
+            normalized = self._normalize_text(text, encoding)
+            encoded = normalized.encode("utf-16-le") + b"\x00\x00"
+            if not self._open_and_clear():
+                return False
 
-        user32.SetClipboardData(CF_UNICODETEXT, handle)
-        user32.CloseClipboard()
+            kernel32 = ctypes.windll.kernel32
+            user32 = ctypes.windll.user32
+            handle = kernel32.GlobalAlloc(GHND, len(encoded))
+            if not handle:
+                user32.CloseClipboard()
+                logger.warning("Failed to allocate clipboard memory.")
+                return False
 
-    def write_image(self, image_bytes: bytes) -> None:
-        self._open_and_clear()
-        kernel32 = ctypes.windll.kernel32
-        user32 = ctypes.windll.user32
+            pointer = kernel32.GlobalLock(handle)
+            if not pointer:
+                kernel32.GlobalFree(handle)
+                user32.CloseClipboard()
+                logger.warning("Failed to lock clipboard memory.")
+                return False
 
-        handle = kernel32.GlobalAlloc(GHND, len(image_bytes))
-        if not handle:
+            try:
+                ctypes.memmove(pointer, encoded, len(encoded))
+            finally:
+                kernel32.GlobalUnlock(handle)
+
+            user32.SetClipboardData(CF_UNICODETEXT, handle)
             user32.CloseClipboard()
-            raise RuntimeError("Failed to allocate clipboard memory for image data.")
+            return True
+        except Exception as e:
+            logger.warning(f"Clipboard write_text failed: {e}")
+            return False
 
-        pointer = kernel32.GlobalLock(handle)
-        if not pointer:
-            kernel32.GlobalFree(handle)
-            user32.CloseClipboard()
-            raise RuntimeError("Failed to lock clipboard image memory.")
-
+    def write_image(self, image_bytes: bytes) -> bool:
         try:
-            ctypes.memmove(pointer, image_bytes, len(image_bytes))
-        finally:
-            kernel32.GlobalUnlock(handle)
+            if not self._open_and_clear():
+                return False
+            kernel32 = ctypes.windll.kernel32
+            user32 = ctypes.windll.user32
 
-        user32.SetClipboardData(CF_DIB, handle)
-        user32.CloseClipboard()
+            handle = kernel32.GlobalAlloc(GHND, len(image_bytes))
+            if not handle:
+                user32.CloseClipboard()
+                logger.warning("Failed to allocate clipboard memory for image data.")
+                return False
 
-    def _open_and_clear(self) -> None:
-        user32 = ctypes.windll.user32
-        if not user32.OpenClipboard(None):
-            raise RuntimeError("Unable to open clipboard.")
-        user32.EmptyClipboard()
+            pointer = kernel32.GlobalLock(handle)
+            if not pointer:
+                kernel32.GlobalFree(handle)
+                user32.CloseClipboard()
+                logger.warning("Failed to lock clipboard image memory.")
+                return False
+
+            try:
+                ctypes.memmove(pointer, image_bytes, len(image_bytes))
+            finally:
+                kernel32.GlobalUnlock(handle)
+
+            user32.SetClipboardData(CF_DIB, handle)
+            user32.CloseClipboard()
+            return True
+        except Exception as e:
+            logger.warning(f"Clipboard write_image failed: {e}")
+            return False
+
+    def _open_and_clear(self) -> bool:
+        try:
+            user32 = ctypes.windll.user32
+            if not user32.OpenClipboard(None):
+                logger.warning("Unable to open clipboard.")
+                return False
+            user32.EmptyClipboard()
+            return True
+        except Exception as e:
+            logger.warning(f"Error opening/clearing clipboard: {e}")
+            return False
 
     def _normalize_text(self, text: str, encoding: str) -> str:
         normalized = text.replace("\r\n", "\n").replace("\r", "\n")
@@ -164,8 +190,10 @@ class ClipboardManager:
     ) -> ClipboardOperationResult:
         if delay_seconds > 0:
             self.sleep_fn(delay_seconds)
-        self.backend.write_text(text, encoding=encoding)
+        success = self.backend.write_text(text, encoding=encoding)
         self.sleep_fn(self.stabilization_wait_seconds)
+        if not success:
+            return ClipboardOperationResult(succeeded=False, reason="Backend write_text failed.")
         content = ClipboardContent(
             content_type=ClipboardContentType.TEXT,
             text=self._normalize_for_comparison(text),
@@ -182,8 +210,10 @@ class ClipboardManager:
     ) -> ClipboardOperationResult:
         if delay_seconds > 0:
             self.sleep_fn(delay_seconds)
-        self.backend.write_image(image_bytes)
+        success = self.backend.write_image(image_bytes)
         self.sleep_fn(self.stabilization_wait_seconds)
+        if not success:
+            return ClipboardOperationResult(succeeded=False, reason="Backend write_image failed.")
         content = ClipboardContent(content_type=ClipboardContentType.IMAGE, image_bytes=image_bytes)
         self._log("write_image", content.content_type, "Image written to clipboard.")
         return ClipboardOperationResult(succeeded=True, content=content)

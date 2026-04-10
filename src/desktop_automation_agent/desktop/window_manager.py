@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.wintypes
+import logging
 import os
 from dataclasses import dataclass, replace
 from time import sleep
@@ -10,6 +11,8 @@ from typing import Callable
 from desktop_automation_agent.contracts import WindowBackend
 from desktop_automation_agent.models import WindowContext, WindowOperationResult
 
+
+logger = logging.getLogger(__name__)
 
 SW_MINIMIZE = 6
 SW_MAXIMIZE = 3
@@ -92,8 +95,11 @@ class Win32WindowBackend:
         )
 
     def _get_process_name_for_window(self, handle: int) -> str | None:
-        user32 = ctypes.windll.user32
-        kernel32 = ctypes.windll.kernel32
+        try:
+            user32 = ctypes.windll.user32
+            kernel32 = ctypes.windll.kernel32
+        except AttributeError:
+            return None
         process_id = ctypes.wintypes.DWORD()
         user32.GetWindowThreadProcessId(handle, ctypes.byref(process_id))
         if not process_id.value:
@@ -203,6 +209,8 @@ class DesktopWindowManager:
         )
 
     def _find_window(self, title: str | None, process_name: str | None) -> WindowContext | None:
+        if not title and not process_name:
+            return None
         normalized_title = title.casefold() if title else None
         normalized_process = process_name.casefold() if process_name else None
 

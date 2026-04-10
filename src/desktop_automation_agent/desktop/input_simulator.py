@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.wintypes
+import logging
 from dataclasses import dataclass
 from time import sleep
 from typing import Callable
@@ -41,30 +42,77 @@ class Win32WindowManager:
         )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class PyAutoGUIBackend:
-    _module: object
+    _module: Any
 
     @classmethod
     def create(cls) -> "PyAutoGUIBackend":
-        import pyautogui
+        try:
+            import pyautogui
 
-        return cls(_module=pyautogui)
+            return cls(_module=pyautogui)
+        except ImportError:
+            logger.warning("pyautogui not found, using mock backend.")
+            return cls(_module=None)
 
-    def click(self, x: int, y: int, button: str) -> None:
-        self._module.click(x=x, y=y, button=button)
+    def click(self, x: int, y: int, button: str) -> bool:
+        if self._module is None:
+            return False
+        try:
+            self._module.click(x=x, y=y, button=button)
+            # Verify success by checking mouse position (with some tolerance for rounding)
+            curr_x, curr_y = self._module.position()
+            if abs(curr_x - x) > 1 or abs(curr_y - y) > 1:
+                logger.warning(f"Click at ({x}, {y}) might have failed. Current position: ({curr_x}, {curr_y})")
+                return False
+            return True
+        except Exception as e:
+            logger.warning(f"PyAutoGUI click failed: {e}")
+            return False
 
-    def press(self, key: str) -> None:
-        self._module.press(key)
+    def press(self, key: str) -> bool:
+        if self._module is None:
+            return False
+        try:
+            self._module.press(key)
+            return True
+        except Exception as e:
+            logger.warning(f"PyAutoGUI press failed: {e}")
+            return False
 
-    def write(self, text: str) -> None:
-        self._module.write(text)
+    def write(self, text: str) -> bool:
+        if self._module is None:
+            return False
+        try:
+            self._module.write(text)
+            return True
+        except Exception as e:
+            logger.warning(f"PyAutoGUI write failed: {e}")
+            return False
 
-    def scroll(self, clicks: int) -> None:
-        self._module.scroll(clicks)
+    def scroll(self, clicks: int) -> bool:
+        if self._module is None:
+            return False
+        try:
+            self._module.scroll(clicks)
+            return True
+        except Exception as e:
+            logger.warning(f"PyAutoGUI scroll failed: {e}")
+            return False
 
-    def hotkey(self, *keys: str) -> None:
-        self._module.hotkey(*keys)
+    def hotkey(self, *keys: str) -> bool:
+        if self._module is None:
+            return False
+        try:
+            self._module.hotkey(*keys)
+            return True
+        except Exception as e:
+            logger.warning(f"PyAutoGUI hotkey failed: {e}")
+            return False
 
 
 @dataclass(slots=True)
@@ -292,37 +340,39 @@ class SafeInputSimulator:
 
     def _execute_action(self, action: InputAction) -> float:
         total_delay = 0.0
+        success = False
         if action.action_type is InputActionType.CLICK:
             x, y = action.position or self._center(action.target.element_bounds)
             total_delay += self._apply_pre_action_delay(action)
-            self._backend.click(x, y, action.button)
+            success = self._backend.click(x, y, action.button)
             total_delay += self._apply_post_action_delay(action)
-            return total_delay
 
-        if action.action_type is InputActionType.KEYPRESS:
+        elif action.action_type is InputActionType.KEYPRESS:
             total_delay += self._apply_pre_action_delay(action)
-            self._backend.press(action.key or "")
+            success = self._backend.press(action.key or "")
             total_delay += self._apply_post_action_delay(action)
-            return total_delay
 
-        if action.action_type is InputActionType.TYPE_TEXT:
-            total_delay += self._apply_typing_action(action)
+        elif action.action_type is InputActionType.TYPE_TEXT:
+            delay, success = self._apply_typing_action(action)
+            total_delay += delay
             total_delay += self._apply_post_action_delay(action)
-            return total_delay
 
-        if action.action_type is InputActionType.SCROLL:
+        elif action.action_type is InputActionType.SCROLL:
             total_delay += self._apply_pre_action_delay(action)
-            self._backend.scroll(action.scroll_amount or 0)
+            success = self._backend.scroll(action.scroll_amount or 0)
             total_delay += self._apply_post_action_delay(action)
-            return total_delay
 
-        if action.action_type is InputActionType.HOTKEY:
+        elif action.action_type is InputActionType.HOTKEY:
             total_delay += self._apply_pre_action_delay(action)
-            self._backend.hotkey(*action.hotkey)
+            success = self._backend.hotkey(*action.hotkey)
             total_delay += self._apply_post_action_delay(action)
+        else:
+            logger.warning(f"Unsupported action type: {action.action_type}")
             return total_delay
 
-        raise ValueError(f"Unsupported action type: {action.action_type}")
+        if not success:
+            logger.warning(f"Action {action.action_type} execution reported failure.")
+        return total_delay
 
     def _center(self, bounds: tuple[int, int, int, int] | None) -> tuple[int, int]:
         if bounds is None:
@@ -365,20 +415,23 @@ class SafeInputSimulator:
             self._sleep_fn(delay)
         return delay
 
-    def _apply_typing_action(self, action: InputAction) -> float:
+    def _apply_typing_action(self, action: InputAction) -> tuple[float, bool]:
         text = action.text or ""
         if self._pacing_controller is None:
-            self._backend.write(text)
-            return 0.0
+            success = self._backend.write(text)
+            return 0.0, success
 
         total_delay = 0.0
+        overall_success = True
         for index, character in enumerate(text):
             if index == 0:
                 initial_delay = self._resolve_pre_action_delay(action)
                 if initial_delay > 0:
                     self._sleep_fn(initial_delay)
                     total_delay += initial_delay
-            self._backend.write(character)
+            success = self._backend.write(character)
+            if not success:
+                overall_success = False
             decisions = self._pacing_controller.typing_delays(
                 character,
                 account_name=self._account_name,
@@ -390,7 +443,7 @@ class SafeInputSimulator:
                     total_delay += decision.delay_seconds
         if not text:
             total_delay += self._apply_pre_action_delay(action)
-        return total_delay
+        return total_delay, overall_success
 
     def _resolve_pre_action_delay(self, action: InputAction) -> float:
         if self._pacing_controller is None:
