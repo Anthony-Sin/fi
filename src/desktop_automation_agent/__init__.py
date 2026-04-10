@@ -44,7 +44,7 @@ def create_agent() -> DesktopAutomationAgent:
     import pyautogui
     width, height = pyautogui.size()
     input_backend = PyAutoGUIBackend.create()
-    screen_inspector = StaticScreenInspector(bounds=ScreenBounds(width=width, height=height))
+    screen_inspector = StaticScreenInspector(bounds=ScreenBounds(0, 0, 1920, 1080))
     input_runner = SafeInputSimulator(
         backend=input_backend,
         window_manager=Win32WindowManager(),
