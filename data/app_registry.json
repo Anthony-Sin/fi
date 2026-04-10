@@ -2,31 +2,93 @@
   "applications": [
     {
       "name": "Chrome",
-      "launch_mode": "url",
+      "launch_mode": "start_menu",
+      "executable_path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "start_menu_query": "Google Chrome",
       "url": "https://www.google.com",
       "default_arguments": [],
       "default_url_parameters": {},
       "startup_signature": {
-        "process_name": "chrome.exe"
-      }
+        "window_title": "Google Chrome",
+        "process_name": "chrome.exe",
+        "element_selector": null
+      },
+      "pacing_profile_id": "standard_browser"
+    },
+    {
+      "name": "Firefox",
+      "launch_mode": "start_menu",
+      "executable_path": "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
+      "start_menu_query": "Firefox",
+      "url": null,
+      "default_arguments": [],
+      "default_url_parameters": {},
+      "startup_signature": {
+        "window_title": "Mozilla Firefox",
+        "process_name": "firefox.exe",
+        "element_selector": null
+      },
+      "pacing_profile_id": "standard_browser"
     },
     {
       "name": "Notepad",
       "launch_mode": "executable",
       "executable_path": "notepad.exe",
+      "start_menu_query": "Notepad",
+      "url": null,
       "default_arguments": [],
+      "default_url_parameters": {},
       "startup_signature": {
-        "process_name": "notepad.exe"
-      }
+        "window_title": "Notepad",
+        "process_name": "notepad.exe",
+        "element_selector": null
+      },
+      "pacing_profile_id": "minimal_delay"
+    },
+    {
+      "name": "VSCode",
+      "launch_mode": "start_menu",
+      "executable_path": null,
+      "start_menu_query": "Visual Studio Code",
+      "url": null,
+      "default_arguments": [],
+      "default_url_parameters": {},
+      "startup_signature": {
+        "window_title": "Visual Studio Code",
+        "process_name": "Code.exe",
+        "element_selector": null
+      },
+      "pacing_profile_id": "ide_pacing"
+    },
+    {
+      "name": "File Explorer",
+      "launch_mode": "executable",
+      "executable_path": "explorer.exe",
+      "start_menu_query": "File Explorer",
+      "url": null,
+      "default_arguments": [],
+      "default_url_parameters": {},
+      "startup_signature": {
+        "window_title": "File Explorer",
+        "process_name": "explorer.exe",
+        "element_selector": null
+      },
+      "pacing_profile_id": "system_app"
     },
     {
       "name": "Calculator",
       "launch_mode": "executable",
       "executable_path": "calc.exe",
+      "start_menu_query": "Calculator",
+      "url": null,
       "default_arguments": [],
+      "default_url_parameters": {},
       "startup_signature": {
-        "process_name": "Calculator.exe"
-      }
+        "window_title": "Calculator",
+        "process_name": "Calculator.exe",
+        "element_selector": null
+      },
+      "pacing_profile_id": "system_app"
     }
   ]
 }
