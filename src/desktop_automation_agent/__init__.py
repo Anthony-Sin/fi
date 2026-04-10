@@ -29,10 +29,86 @@ from .agents import (
 )
 
 def create_agent() -> DesktopAutomationAgent:
-    """Factory function to create a pre-configured DesktopAutomationAgent."""
+    """Factory function to create a pre-configured DesktopAutomationAgent with all core specialists."""
     agent = DesktopAutomationAgent()
-    # In a real environment, we would instantiate and register actual backends here.
-    # For now, it provides the core orchestration structure.
+
+    # 1. Initialize Core Infrastructure
+    window_manager = DesktopWindowManager()
+    screenshot_backend = PyAutoGUIScreenshotBackend()
+    template_matcher = TemplateImageMatcher(backend=OpenCVImageMatcherBackend())
+    accessibility_reader = AccessibilityTreeReader()
+    ocr_backend = TesseractOCRBackend()
+    ocr_extractor = OCRExtractor(backend=ocr_backend)
+
+    # 2. Initialize Safe Input Simulator
+    input_backend = PyAutoGUIBackend.create()
+    screen_inspector = StaticScreenInspector(bounds=ScreenBounds(left=0, top=0, right=1920, bottom=1080)) # Default resolution
+    input_runner = SafeInputSimulator(
+        backend=input_backend,
+        window_manager=Win32WindowManager(),
+        screen_inspector=screen_inspector
+    )
+
+    # 3. Instantiate Specialists
+
+    # Application Launcher
+    app_registry = ApplicationRegistry(storage_path="data/app_registry.json")
+    app_launcher_backend = SubprocessApplicationLauncherBackend()
+    app_launcher = ApplicationLauncher(
+        registry=app_registry,
+        backend=app_launcher_backend,
+        window_manager=window_manager,
+        accessibility_reader=accessibility_reader,
+        ocr_extractor=ocr_extractor,
+        template_matcher=template_matcher,
+        screenshot_backend=screenshot_backend
+    )
+    agent.register_specialist("application_launcher", app_launcher, ["launch", "open", "start app"])
+
+    # Navigation Step Sequencer
+    state_verifier = ScreenStateVerifier(
+        ocr_extractor=ocr_extractor,
+        template_matcher=template_matcher,
+        window_manager=window_manager,
+        accessibility_reader=accessibility_reader,
+        screenshot_backend=screenshot_backend
+    )
+    nav_sequencer = NavigationStepSequencer(
+        input_runner=input_runner,
+        verifier=state_verifier,
+        launcher=app_launcher
+    )
+    agent.register_specialist("navigation_step_sequencer", nav_sequencer, ["navigate", "click", "scroll", "verify", "wait"])
+
+    # Form Automation
+    form_automation = FormAutomationModule(
+        input_runner=input_runner,
+        accessibility_reader=accessibility_reader,
+        ocr_extractor=ocr_extractor,
+        window_manager=window_manager
+    )
+    agent.register_specialist("form_automation", form_automation, ["fill", "enter", "submit", "form"])
+
+    # AI Interface Navigator
+    clipboard_manager = ClipboardManager(backend=Win32ClipboardBackend())
+    prompt_injector = TargetApplicationPromptInjector(
+        input_runner=input_runner,
+        window_manager=window_manager,
+        clipboard_manager=clipboard_manager,
+        accessibility_reader=accessibility_reader,
+        ocr_extractor=ocr_extractor
+    )
+    ai_navigator = AIInterfaceNavigator(
+        prompt_injector=prompt_injector,
+        input_runner=input_runner,
+        screenshot_backend=screenshot_backend,
+        accessibility_reader=accessibility_reader,
+        ocr_extractor=ocr_extractor,
+        template_matcher=template_matcher,
+        window_manager=window_manager
+    )
+    agent.register_specialist("ai_interface_navigator", ai_navigator, ["chat", "prompt", "ai", "llm", "ask"])
+
     return agent
 
 from .ai import (

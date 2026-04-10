@@ -56,24 +56,32 @@ def test_desktop_automation_agent_workflow_orchestration():
 
 def test_desktop_automation_agent_fallback_to_simulation():
     agent = DesktopAutomationAgent()
+    agent.api_key = "mock-key"
 
     # Register only one specialist
     launcher = MagicMock()
     launcher.launch.return_value = type("Result", (), {"succeeded": True})()
     agent.register_specialist("application_launcher", launcher)
 
-    # Task with a module that isn't registered
-    task = "Launch Notepad and then write 'Hello World'"
+    # Mock AI provider
+    from unittest.mock import patch
+    with patch("desktop_automation_agent.ai.gemini_provider.GeminiProvider") as mock_gen:
+        instance = mock_gen.return_value
+        instance.analyze_image.return_value = '{"succeeded": true, "summary": "AI simulated execution"}'
+        instance.get_token_count.return_value = 10
 
-    result = agent.execute(task)
+        # Task with a module that isn't registered
+        task = "Launch Notepad and then write 'Hello World'"
 
-    assert result.succeeded is True
-    assert len(result.subtask_results) == 2
+        result = agent.execute(task)
 
-    # First subtask should use registered launcher
-    assert result.subtask_results[0].responsible_module == "application_launcher"
-    launcher.launch.assert_called_once()
+        assert result.succeeded is True
+        assert len(result.subtask_results) == 2
 
-    # Second subtask (write) maps to navigation/desktop_automation and should use simulation
-    # We find it by its subtask_id which is decomp-subtask-2
-    assert "Simulated" in result.subtask_results[1].produced_outputs["decomp-subtask-2_result"]
+        # First subtask should use registered launcher
+        assert result.subtask_results[0].responsible_module == "application_launcher"
+        launcher.launch.assert_called_once()
+
+        # Second subtask (write) maps to navigation/desktop_automation and should use AI fallback
+        assert result.subtask_results[1].responsible_module == "ai_vision_fallback"
+        assert "AI simulated execution" in result.subtask_results[1].produced_outputs["decomp-subtask-2_result"]

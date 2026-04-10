@@ -110,6 +110,11 @@ class DesktopAutomationOverlay:
 
     def _build_header(self):
         header = tk.Frame(self.main_container, bg=self.CYBER_BLACK, pady=20, padx=20)
+
+        # Resource Usage Overlay in header
+        self.usage_lbl = tk.Label(header, text="TOKENS: 0 | COST: $0.000000", fg=self.CYBER_BLUE, bg=self.CYBER_BLACK, font=(self.PRIMARY_MONO, 7, "bold"))
+        self.usage_lbl.place(relx=1.0, x=-5, y=0, anchor="ne")
+
         header.pack(fill=tk.X)
 
         # Profile Picture Placeholder
@@ -179,6 +184,8 @@ class DesktopAutomationOverlay:
 
         self._create_poly_button(btn_frame, "EXECUTE", self.CYBER_YELLOW, self.CYBER_BLACK, self._send_text_command, side=tk.LEFT)
         self._create_poly_button(btn_frame, "VOICE", self.CYBER_PINK, self.CYBER_YELLOW, self._listen_voice, side=tk.RIGHT)
+
+        self._create_poly_button(input_container, "EMERGENCY STOP", self.CYBER_PINK, self.CYBER_YELLOW, self._emergency_stop)
 
         # 2. ACTIVE_OPERATIONS
         ops_container = self._create_cyber_section(self.scrollable_frame, "ACTIVE_OPERATIONS")
@@ -290,12 +297,27 @@ class DesktopAutomationOverlay:
             self.on_settings_changed(api_key, model)
             self._add_log_line("CONFIG UPDATED", self.CYBER_BLUE)
 
+    def _emergency_stop(self):
+        self._add_log_line("EMERGENCY STOP TRIGGERED", self.CYBER_PINK)
+        # Notify agent to stop all tasks
+        if hasattr(self, 'agent') and self.agent:
+            self.agent.stop_all_tasks()
+        else:
+            # Fallback if agent reference not yet established
+            print("EMERGENCY STOP: Terminating process.")
+            os._exit(1)
+
     def update_status(self, message: str):
         if self.root:
             self.root.after(0, lambda: self._add_log_line(message))
 
     def update_resource_usage(self, tokens: int, cost: float):
-        pass
+        if self.root:
+            self.root.after(0, lambda: self._ui_update_resource_usage(tokens, cost))
+
+    def _ui_update_resource_usage(self, tokens: int, cost: float):
+        if hasattr(self, 'usage_lbl'):
+            self.usage_lbl.config(text=f"TOKENS: {tokens} | COST: ${cost:.6f}")
 
     def set_active_plan(self, plan: OrchestratorTaskPlan):
         if self.root:

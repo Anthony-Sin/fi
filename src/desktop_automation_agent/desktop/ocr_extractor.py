@@ -55,6 +55,7 @@ class TesseractOCRBackend:
 @dataclass(slots=True)
 class OCRExtractor:
     backend: OCRBackend
+    ai_fallback: object | None = None
 
     def extract_text(
         self,
@@ -90,7 +91,9 @@ class OCRExtractor:
         language: str = "eng",
         minimum_confidence: float = 0.0,
         fuzzy_threshold: float = 0.72,
+        ai_fallback: object | None = None,
     ) -> OCRTextMatchResult:
+        ai_fallback = ai_fallback or self.ai_fallback
         extraction = self.extract_text(
             screenshot_path=screenshot_path,
             region_of_interest=region_of_interest,
@@ -107,21 +110,48 @@ class OCRExtractor:
                 best_score = score
                 best_block = block
 
-        if best_block is None or best_score < fuzzy_threshold:
+        if best_block is not None and best_score >= fuzzy_threshold:
             return OCRTextMatchResult(
-                succeeded=False,
+                succeeded=True,
                 target=target,
+                bounds=best_block.bounds,
                 confidence=best_score,
-                matched_text=best_block.text if best_block else None,
-                reason="No OCR text matched the target strongly enough.",
+                matched_text=best_block.text,
             )
 
+        # AI Fallback
+        if ai_fallback is not None:
+            image = (
+                self.backend.load_image(screenshot_path)
+                if screenshot_path is not None
+                else self.backend.capture_screenshot(region_of_interest)
+            )
+            prompt = f"Find the coordinates of the text '{target}' in this image. Return the coordinates as [left, top, right, bottom]. If not found, say 'NOT_FOUND'."
+            try:
+                ai_response = ai_fallback.analyze_image(prompt, image)
+                if "NOT_FOUND" not in ai_response:
+                    # Simple regex to extract coordinates like [10, 20, 100, 50]
+                    import re
+                    coords = re.findall(r"\[\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\]", ai_response)
+                    if coords:
+                        bounds = tuple(map(int, coords[0]))
+                        return OCRTextMatchResult(
+                            succeeded=True,
+                            target=target,
+                            bounds=bounds,
+                            confidence=0.95, # High confidence for AI vision
+                            matched_text=target,
+                            detail="Found via AI vision fallback."
+                        )
+            except Exception as e:
+                print(f"DEBUG: AI Fallback failed: {e}")
+
         return OCRTextMatchResult(
-            succeeded=True,
+            succeeded=False,
             target=target,
-            bounds=best_block.bounds,
             confidence=best_score,
-            matched_text=best_block.text,
+            matched_text=best_block.text if best_block else None,
+            reason="No OCR text matched the target strongly enough.",
         )
 
     def _score_match(self, target: str, candidate: str) -> float:
