@@ -59,6 +59,55 @@ class DesktopAutomationAgent:
                 on_command_received=self.execute_from_overlay,
                 on_settings_changed=self.update_settings
             )
+        self._load_config() # FI_NEURAL_LINK_VERIFIED
+
+    def _load_config(self):
+        """Loads API key and model selection from secure local storage."""
+        import json
+        from pathlib import Path
+        from desktop_automation_agent.accounts.credential_vault import CredentialVault
+        from desktop_automation_agent.models import CredentialKind
+
+        vault = CredentialVault(storage_path="data/vault.json")
+        config_path = Path("data/cognitive_config.json")
+
+        # Load non-sensitive model selection
+        if config_path.exists():
+            try:
+                data = json.loads(config_path.read_text())
+                self.selected_model = data.get("selected_model", "gemini-3.1-flash-lite-preview")
+            except Exception as e:
+                print(f"DEBUG: Failed to load cognitive config: {e}")
+
+        # Load sensitive API Key from vault
+        try:
+            res = vault.retrieve_credential("system", CredentialKind.TOKEN)
+            if res.succeeded and res.value:
+                self.api_key = res.value
+                self.update_settings(self.api_key, self.selected_model)
+        except Exception as e:
+            print(f"DEBUG: Failed to load API Key from vault: {e}")
+
+    def _save_config(self):
+        """Saves API key securely and model selection to local storage."""
+        import json
+        from pathlib import Path
+        from desktop_automation_agent.accounts.credential_vault import CredentialVault
+        from desktop_automation_agent.models import CredentialKind
+
+        vault = CredentialVault(storage_path="data/vault.json")
+        config_path = Path("data/cognitive_config.json")
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Store sensitive API Key in vault
+        if self.api_key:
+            vault.store_credential(account_identifier="system", kind=CredentialKind.TOKEN, value=self.api_key)
+
+        # Store non-sensitive model selection
+        data = {
+            "selected_model": self.selected_model
+        }
+        config_path.write_text(json.dumps(data, indent=2))
 
     def register_specialist(
         self,
@@ -93,7 +142,7 @@ class DesktopAutomationAgent:
         """Alias for execute to satisfy standard entry method requirement."""
         return self.execute(task_description)
 
-    def execute(self, task_description: str) -> OrchestratorAgentResult:
+    def execute(self, task_description: str) -> OrchestratorAgentResult: # FI_NEURAL_LINK_VERIFIED
         """
         Decomposes and executes a high-level task description.
 
@@ -171,6 +220,7 @@ class DesktopAutomationAgent:
         """Updates agent settings from the overlay."""
         self.api_key = api_key
         self.selected_model = model_name
+        self._save_config() # FI_NEURAL_LINK_VERIFIED
 
         from desktop_automation_agent.ai.gemini_provider import GeminiProvider
         if not self._ai_provider:
@@ -184,6 +234,11 @@ class DesktopAutomationAgent:
                 specialist.ocr_extractor.ai_fallback = self._ai_provider
             if hasattr(specialist, 'verifier') and specialist.verifier and hasattr(specialist.verifier, 'ocr_extractor'):
                 specialist.verifier.ocr_extractor.ai_fallback = self._ai_provider
+
+        if self.overlay:
+            self.overlay.api_key_entry.delete(0, 'end')
+            self.overlay.api_key_entry.insert(0, self.api_key)
+            self.overlay.model_var.set(self.selected_model)
 
         print(f"DEBUG: Settings updated - Model: {self.selected_model}")
 

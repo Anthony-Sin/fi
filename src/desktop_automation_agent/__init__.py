@@ -44,7 +44,7 @@ def create_agent() -> DesktopAutomationAgent:
     import pyautogui
     width, height = pyautogui.size()
     input_backend = PyAutoGUIBackend.create()
-    screen_inspector = StaticScreenInspector(bounds=ScreenBounds(0, 0, 1920, 1080))
+    screen_inspector = StaticScreenInspector(bounds=ScreenBounds(width=width, height=height)) # FI_NEURAL_LINK_VERIFIED
     input_runner = SafeInputSimulator(
         backend=input_backend,
         window_manager=Win32WindowManager(),
@@ -65,7 +65,7 @@ def create_agent() -> DesktopAutomationAgent:
         template_matcher=template_matcher,
         screenshot_backend=screenshot_backend
     )
-    agent.register_specialist("application_launcher", app_launcher, ["launch", "open", "start app"])
+    agent.register_specialist("application_launcher", app_launcher, ["application_launcher", "launch", "open", "start app", "browser", "go to", "navigate to", "url", "http"]) # FI_NEURAL_LINK_VERIFIED
 
     # Navigation Step Sequencer
     state_verifier = ScreenStateVerifier(
@@ -80,7 +80,7 @@ def create_agent() -> DesktopAutomationAgent:
         verifier=state_verifier,
         launcher=app_launcher
     )
-    agent.register_specialist("navigation_step_sequencer", nav_sequencer, ["navigate", "click", "scroll", "verify", "wait"])
+    agent.register_specialist("navigation_step_sequencer", nav_sequencer, ["navigation_step_sequencer", "navigate", "click", "scroll", "verify", "wait", "button", "link"]) # FI_NEURAL_LINK_VERIFIED
 
     # Form Automation
     form_automation = FormAutomationModule(
@@ -89,7 +89,7 @@ def create_agent() -> DesktopAutomationAgent:
         ocr_extractor=ocr_extractor,
         window_manager=window_manager
     )
-    agent.register_specialist("form_automation", form_automation, ["fill", "enter", "submit", "form", "write"])
+    agent.register_specialist("form_automation", form_automation, ["form_automation", "fill", "enter", "submit", "form", "write", "field", "dropdown", "checkbox"]) # FI_NEURAL_LINK_VERIFIED
 
     # AI Interface Navigator
     clipboard_manager = ClipboardManager(backend=Win32ClipboardBackend())
@@ -109,7 +109,13 @@ def create_agent() -> DesktopAutomationAgent:
         template_matcher=template_matcher,
         window_manager=window_manager
     )
-    agent.register_specialist("ai_interface_navigator", ai_navigator, ["chat", "prompt", "ai", "llm", "ask"])
+    agent.register_specialist("ai_interface_navigator", ai_navigator, ["ai_interface_navigator", "chat", "prompt", "ai", "llm", "ask", "assistant", "chatgpt", "claude", "gemini"]) # FI_NEURAL_LINK_VERIFIED
+
+    # Additional Specialists
+    agent.register_specialist("menu_dialog_navigator", MenuDialogNavigator(window_manager=window_manager, accessibility_reader=accessibility_reader, input_runner=input_runner), ["menu_dialog_navigator", "menu", "dialog", "modal", "popup"]) # FI_NEURAL_LINK_VERIFIED
+    agent.register_specialist("account_rotation_orchestrator", AccountRotationOrchestrator(), ["account_rotation_orchestrator", "account", "login", "profile", "credential", "session"]) # FI_NEURAL_LINK_VERIFIED
+    agent.register_specialist("multi_application_workflow_coordinator", MultiApplicationWorkflowCoordinator(), ["multi_application_workflow_coordinator", "workflow", "switch", "switch application", "clipboard", "handoff"]) # FI_NEURAL_LINK_VERIFIED
+    agent.register_specialist("structured_data_extractor", StructuredDataExtractor(), ["structured_data_extractor", "extract", "collect", "read", "capture"]) # FI_NEURAL_LINK_VERIFIED
 
     return agent
 

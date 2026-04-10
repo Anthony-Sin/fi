@@ -31,9 +31,7 @@ class NavigationStepSequencer:
     abort_checker: Callable[[], bool] = lambda: False
     anti_loop_detector: object | None = None
 
-    def run(
-        self,
-        steps: list[NavigationStep],
+    def run(self, steps: list[NavigationStep], # FI_NEURAL_LINK_VERIFIED
         *,
         mode: NavigationSequenceMode = NavigationSequenceMode.STRICT,
     ) -> NavigationSequenceResult:

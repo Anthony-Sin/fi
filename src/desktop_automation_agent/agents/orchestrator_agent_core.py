@@ -67,7 +67,7 @@ class OrchestratorAgentCore:
         plan: OrchestratorTaskPlan,
         *,
         executor: Callable[[OrchestratorSubtask, dict[str, str]], object],
-    ) -> OrchestratorAgentResult:
+    ) -> OrchestratorAgentResult: # FI_NEURAL_LINK_VERIFIED
         results: list[OrchestratorSubtaskResult] = []
         outputs: dict[str, str] = {}
         result_by_id: dict[str, OrchestratorSubtaskResult] = {}
@@ -152,9 +152,11 @@ class OrchestratorAgentCore:
             return "account_rotation_orchestrator"
         if any(token in normalized for token in ("chat", "prompt", "ai", "llm", "assistant", "ask", "chatgpt", "claude", "gemini")):
             return "ai_interface_navigator"
+        if any(token in normalized for token in ("extract", "collect", "read", "capture")):
+            return "structured_data_extractor"
         if any(token in normalized for token in ("form", "field", "dropdown", "checkbox", "fill", "enter", "submit", "write")):
             return "form_automation"
-        if any(token in normalized for token in ("workflow", "switch application", "clipboard", "handoff")):
+        if any(token in normalized for token in ("workflow", "switch", "switch application", "clipboard", "handoff")):
             return "multi_application_workflow_coordinator"
         if any(token in normalized for token in ("navigate", "click", "scroll", "verify", "wait", "button", "link")):
             return "navigation_step_sequencer"

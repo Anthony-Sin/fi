@@ -50,9 +50,18 @@ class AIInterfaceNavigator:
         self,
         *,
         prompt: str,
-        interface: AIInterfaceConfiguration,
+        interface: AIInterfaceConfiguration | str | None = None,
         injection_method: PromptInjectionMethod = PromptInjectionMethod.CLIPBOARD,
     ) -> AIInterfaceNavigationResult:
+        if isinstance(interface, str) or interface is None:
+            interface = self._get_default_interface_config(interface or prompt)
+
+        # Ensure browser is open and navigated to URL if specified
+        if interface.url:
+            import webbrowser
+            webbrowser.open(interface.url)
+            self.sleep_fn(2.0) # Wait for browser to load
+
         observations = [
             AIInterfaceObservation(
                 status=AIInterfaceStatus.READY,
@@ -528,3 +537,53 @@ class AIInterfaceNavigator:
             return None
         left, top, right, bottom = bounds
         return ((left + right) // 2, (top + bottom) // 2)
+
+    def _get_default_interface_config(self, query: str) -> AIInterfaceConfiguration:
+        """Returns a default configuration for standard AI bots if none is provided."""
+        normalized = query.casefold()
+
+        # Default for ChatGPT
+        if "chatgpt" in normalized:
+            return AIInterfaceConfiguration(
+                interface_name="ChatGPT",
+                url="https://chatgpt.com",
+                input_selector=AIInterfaceElementSelector(
+                    name="Prompt",
+                    role="textbox",
+                    target_text="Message ChatGPT",
+                    strategies=(SelectorStrategy.ACCESSIBILITY, SelectorStrategy.OCR)
+                ),
+                submit_mode=AIInterfaceSubmitMode.ENTER,
+                response_selector=AIInterfaceElementSelector(
+                    role="log",
+                    strategies=(SelectorStrategy.ACCESSIBILITY, SelectorStrategy.OCR)
+                )
+            )
+
+        # Default for Gemini
+        if "gemini" in normalized:
+            return AIInterfaceConfiguration(
+                interface_name="Gemini",
+                url="https://gemini.google.com/app",
+                input_selector=AIInterfaceElementSelector(
+                    name="Prompt",
+                    role="textbox",
+                    target_text="Type something here",
+                    strategies=(SelectorStrategy.ACCESSIBILITY, SelectorStrategy.OCR)
+                ),
+                submit_mode=AIInterfaceSubmitMode.ENTER,
+                response_selector=AIInterfaceElementSelector(
+                    role="article",
+                    strategies=(SelectorStrategy.ACCESSIBILITY, SelectorStrategy.OCR)
+                )
+            )
+
+        # Generic Fallback
+        return AIInterfaceConfiguration(
+            interface_name="Generic AI",
+            input_selector=AIInterfaceElementSelector(
+                role="textbox",
+                strategies=(SelectorStrategy.ACCESSIBILITY, SelectorStrategy.OCR)
+            ),
+            submit_mode=AIInterfaceSubmitMode.ENTER
+        )

@@ -192,9 +192,7 @@ class ApplicationLauncher:
     sleep_fn: Callable[[float], None] = sleep
     monotonic_fn: Callable[[], float] = monotonic
 
-    def launch(
-        self,
-        request: ApplicationLaunchRequest,
+    def launch(self, request: ApplicationLaunchRequest, # FI_NEURAL_LINK_VERIFIED
         *,
         workflow_id: str | None = None,
         step_name: str = "application_launch",

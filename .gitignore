@@ -1,3 +1,5 @@
 __pycache__/
 .pytest_cache/
 tests_tmp_*/
+data/*.json
+data/*.log
