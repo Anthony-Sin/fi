@@ -234,6 +234,8 @@ class DesktopAutomationAgent:
                 specialist.ocr_extractor.ai_fallback = self._ai_provider
             if hasattr(specialist, 'verifier') and specialist.verifier and hasattr(specialist.verifier, 'ocr_extractor'):
                 specialist.verifier.ocr_extractor.ai_fallback = self._ai_provider
+            if hasattr(specialist, 'ai_provider'):
+                specialist.ai_provider = self._ai_provider
 
         if self.overlay:
             if hasattr(self.overlay, 'api_key_entry'):

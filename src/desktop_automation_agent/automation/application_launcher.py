@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic, sleep
-from typing import Callable
+from typing import Any, Callable
 from urllib.parse import urlencode
 
 from desktop_automation_agent.contracts import (
@@ -32,6 +32,28 @@ from desktop_automation_agent.models import (
     SelectorStrategy,
     TemplateSearchRequest,
 )
+
+AI_LAUNCH_PROMPT_TEMPLATE = """You are controlling a Windows 11 desktop via keyboard and mouse.
+Use Windows shortcuts and commands to complete the task.
+Common shortcuts you MUST use:
+- File Explorer: Win+E
+- Run dialog: Win+R then type the app name
+- Open URL in browser: Win+R then type the URL and press Enter
+- Notepad: Win+R then type 'notepad' then Enter
+- Chrome: Win+R then type 'chrome' then Enter
+- Edge: Win+R then type 'msedge' then Enter
+- Task Manager: Ctrl+Shift+Esc
+
+ALWAYS return a JSON object with an actions list using these types:
+- {{"type": "hotkey", "keys": ["win", "e"]}}
+- {{"type": "hotkey", "keys": ["win", "r"]}}
+- {{"type": "type", "text": "chrome\\n"}}
+- {{"type": "press", "key": "enter"}}
+- {{"type": "wait", "seconds": 0.5}}
+
+Current task: {task_description}
+
+Return ONLY valid JSON. No explanation. No markdown."""
 
 
 @dataclass(slots=True)
@@ -192,6 +214,7 @@ class ApplicationLauncher:
     ocr_extractor: OCRExtractor | None = None
     template_matcher: TemplateMatcher | None = None
     screenshot_backend: ScreenshotBackend | None = None
+    ai_provider: Any | None = None
     allowlist_enforcer: object | None = None
     sleep_fn: Callable[[float], None] = sleep
     monotonic_fn: Callable[[], float] = monotonic
@@ -201,9 +224,29 @@ class ApplicationLauncher:
         workflow_id: str | None = None,
         step_name: str = "application_launch",
     ) -> ApplicationLaunchResult:
+        # Common apps check - bypass registry and use AI
+        common_apps = {"file explorer", "notepad", "chrome", "edge", "msedge", "task manager"}
+        app_name_lower = request.application_name.lower()
+
+        if app_name_lower in common_apps or any(app in app_name_lower for app in common_apps):
+            if self._launch_with_ai(request.application_name):
+                return ApplicationLaunchResult(
+                    succeeded=True,
+                    status=ApplicationLaunchStatus.STARTED,
+                    launched_command=("ai-launch", request.application_name)
+                )
+
         application = self._resolve_application(request)
         if application is None:
-            # GUI Fallback if app not in registry
+            # AI Fallback if app not in registry
+            if self._launch_with_ai(request.application_name):
+                return ApplicationLaunchResult(
+                    succeeded=True,
+                    status=ApplicationLaunchStatus.STARTED,
+                    launched_command=("ai-fallback", request.application_name)
+                )
+
+            # GUI Fallback as last resort
             if self.launch_via_gui(request.application_name):
                 return ApplicationLaunchResult(
                     succeeded=True,
@@ -213,7 +256,7 @@ class ApplicationLauncher:
             return ApplicationLaunchResult(
                 succeeded=False,
                 status=ApplicationLaunchStatus.FAILED,
-                reason="Application is not registered and GUI fallback failed.",
+                reason="Application is not registered and AI/GUI fallback failed.",
             )
         allowlist_result = self._allow(request=request, application=application, workflow_id=workflow_id, step_name=step_name)
         if allowlist_result is not None:
@@ -387,6 +430,61 @@ class ApplicationLauncher:
             return True
         except Exception as e:
             print(f"DEBUG: GUI fallback failed: {e}")
+            return False
+
+    def _launch_with_ai(self, task_description: str) -> bool:
+        """Sends a well-formatted text prompt to Gemini and executes the returned actions via pyautogui."""
+        if not self.ai_provider:
+            return False
+
+        prompt = AI_LAUNCH_PROMPT_TEMPLATE.format(task_description=task_description)
+        try:
+            response_text = self.ai_provider.generate_text(prompt)
+            if not response_text:
+                return False
+
+            # Find the outermost JSON object
+            start_index = response_text.find('{')
+            end_index = response_text.rfind('}')
+
+            if start_index == -1 or end_index == -1:
+                return False
+
+            json_payload = response_text[start_index:end_index+1]
+            res_data = json.loads(json_payload)
+            actions = res_data.get("actions", [])
+
+            if not actions:
+                return False
+
+            import pyautogui
+            import time
+
+            for action in actions:
+                action_type = action.get("type")
+                if action_type == "hotkey":
+                    keys = action.get("keys", [])
+                    if keys:
+                        print(f"DEBUG: Executing pyautogui.hotkey({', '.join(map(repr, keys))})")
+                        pyautogui.hotkey(*keys)
+                elif action_type == "type":
+                    text = action.get("text")
+                    if text:
+                        print(f"DEBUG: Executing pyautogui.write('{text}')")
+                        pyautogui.write(text)
+                elif action_type == "press":
+                    key = action.get("key")
+                    if key:
+                        print(f"DEBUG: Executing pyautogui.press('{key}')")
+                        pyautogui.press(key)
+                elif action_type == "wait":
+                    seconds = float(action.get("seconds", 0.5))
+                    print(f"DEBUG: Executing time.sleep({seconds})")
+                    time.sleep(seconds)
+
+            return True
+        except Exception as e:
+            print(f"DEBUG: AI launch failed: {e}")
             return False
 
     def _wait_for_startup_signature(
