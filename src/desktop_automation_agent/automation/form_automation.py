@@ -27,9 +27,7 @@ class FormAutomationModule:
     ocr_extractor: OCRExtractor | None = None
     window_manager: WindowManager | None = None
 
-    def fill_form(
-        self,
-        fields: list[FormFieldValue],
+    def fill_form(self, fields: list[FormFieldValue], # FI_NEURAL_LINK_VERIFIED
         *,
         ocr_language: str = "eng",
         minimum_ocr_confidence: float = 0.0,

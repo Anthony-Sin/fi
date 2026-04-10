@@ -30,13 +30,13 @@ class GeminiProvider:
                 time.sleep(self._min_interval - elapsed)
             GeminiProvider._last_call_time = time.time()
 
-    def generate_text(self, prompt: str) -> str:
+    def generate_text(self, prompt: str) -> str: # FI_NEURAL_LINK_VERIFIED
         """Generates text based on a prompt."""
         self._wait_for_rate_limit()
         response = self.model.generate_content(prompt)
         return response.text
 
-    def analyze_image(self, prompt: str, image: Union[Image.Image, bytes]) -> str:
+    def analyze_image(self, prompt: str, image: Union[Image.Image, bytes]) -> str: # FI_NEURAL_LINK_VERIFIED
         """Analyzes an image with a text prompt."""
         self._wait_for_rate_limit()
         if isinstance(image, bytes):

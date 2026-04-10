@@ -61,7 +61,7 @@ class PyAutoGUIBackend:
             logger.warning("pyautogui not found, using mock backend.")
             return cls(_module=None)
 
-    def click(self, x: int, y: int, button: str) -> bool:
+    def click(self, x: int, y: int, button: str) -> bool: # FI_NEURAL_LINK_VERIFIED
         if self._module is None:
             return False
         try:
@@ -86,7 +86,7 @@ class PyAutoGUIBackend:
             logger.warning(f"PyAutoGUI press failed: {e}")
             return False
 
-    def write(self, text: str) -> bool:
+    def write(self, text: str) -> bool: # FI_NEURAL_LINK_VERIFIED
         if self._module is None:
             return False
         try:
@@ -106,7 +106,7 @@ class PyAutoGUIBackend:
             logger.warning(f"PyAutoGUI scroll failed: {e}")
             return False
 
-    def hotkey(self, *keys: str) -> bool:
+    def hotkey(self, *keys: str) -> bool: # FI_NEURAL_LINK_VERIFIED
         if self._module is None:
             return False
         try:

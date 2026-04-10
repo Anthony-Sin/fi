@@ -1438,6 +1438,7 @@ class AIInterfaceElementSelector:
 class AIInterfaceConfiguration:
     interface_name: str
     input_selector: AIInterfaceElementSelector
+    url: str | None = None
     submit_mode: AIInterfaceSubmitMode = AIInterfaceSubmitMode.AUTO
     submit_button_selector: AIInterfaceElementSelector | None = None
     response_selector: AIInterfaceElementSelector | None = None

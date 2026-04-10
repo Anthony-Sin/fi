@@ -65,7 +65,7 @@ class SpecialistAgentRouter:
         *,
         context: dict[str, str] | None = None,
         dispatcher: Callable[[SpecialistAgentRecord, OrchestratorSubtask, dict[str, str]], object] | None = None,
-    ) -> SpecialistRouterResult:
+    ) -> SpecialistRouterResult: # FI_NEURAL_LINK_VERIFIED
         context = dict(context or {})
         match = self._select_best_agent(subtask)
         if match is None:
