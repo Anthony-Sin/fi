@@ -61,8 +61,9 @@ def make_check(check_id):
 
 
 def test_navigation_step_sequencer_executes_steps_in_order_and_verifies_post_conditions():
-    """Verifies that the sequencer executes multiple navigation steps in the correct order
-    and validates that each step's expected post-action state is met before proceeding."""
+    """Verifies that the sequencer executes a list of navigation steps in
+    their defined order and verifies the system state matches the expected
+    post-conditions after each action."""
     monotonic = iter([0.0, 0.2, 0.3, 0.6]).__next__
     sequencer = NavigationStepSequencer(
         input_runner=FakeInputRunner(),
@@ -96,8 +97,8 @@ def test_navigation_step_sequencer_executes_steps_in_order_and_verifies_post_con
 
 
 def test_navigation_step_sequencer_halts_in_strict_mode_on_failure():
-    """Verifies that in STRICT mode, the sequencer immediately stops execution and reports
-    failure if any single navigation step fails to complete successfully."""
+    """Verifies that in 'STRICT' mode, the sequencer immediately stops
+    execution if any step fails."""
     sequencer = NavigationStepSequencer(
         input_runner=FakeInputRunner(results=[False]),
         verifier=FakeVerifier(),
@@ -129,8 +130,8 @@ def test_navigation_step_sequencer_halts_in_strict_mode_on_failure():
 
 
 def test_navigation_step_sequencer_skips_failed_optional_steps_in_lenient_mode():
-    """Verifies that in LENIENT mode, the sequencer will skip steps marked as optional
-    if they fail, allowing the overall workflow to continue."""
+    """Verifies that in 'LENIENT' mode, failed steps that are marked as
+    'optional' are skipped without halting the overall sequence."""
     sequencer = NavigationStepSequencer(
         input_runner=FakeInputRunner(results=[False, True]),
         verifier=FakeVerifier(),
@@ -163,8 +164,8 @@ def test_navigation_step_sequencer_skips_failed_optional_steps_in_lenient_mode()
 
 
 def test_navigation_step_sequencer_replays_only_when_preconditions_are_met():
-    """Verifies that a step can only be replayed if its specific preconditions (e.g., UI state)
-    are currently satisfied in the environment."""
+    """Verifies that a step is only replayed if its defined pre-conditions
+    are correctly satisfied by the current system state."""
     sequencer = NavigationStepSequencer(
         input_runner=FakeInputRunner(),
         verifier=FakeVerifier(
@@ -193,8 +194,8 @@ def test_navigation_step_sequencer_replays_only_when_preconditions_are_met():
 
 
 def test_navigation_step_sequencer_marks_step_non_replayable_when_preconditions_fail():
-    """Verifies that the sequencer correctly identifies a step as non-replayable if the
-    required UI environment state for that step is missing or invalid."""
+    """Verifies that the sequencer identifies a step as 'non-replayable'
+    if the current environment state does not allow for its execution."""
     sequencer = NavigationStepSequencer(
         input_runner=FakeInputRunner(),
         verifier=FakeVerifier(results=[{"failed_checks": ["missing"]}]),
@@ -218,8 +219,8 @@ def test_navigation_step_sequencer_marks_step_non_replayable_when_preconditions_
 
 
 def test_navigation_step_sequencer_supports_navigate_action():
-    """Verifies that the sequencer can handle a NAVIGATE action type, which delegates
-    to an application launcher to open a specific app or URL."""
+    """Verifies that the sequencer can handle 'NAVIGATE' actions by
+    delegating to the application launcher."""
     sequencer = NavigationStepSequencer(
         input_runner=FakeInputRunner(),
         verifier=FakeVerifier(),
@@ -250,8 +251,8 @@ def test_navigation_step_sequencer_supports_navigate_action():
 
 
 def test_navigation_step_sequencer_stops_when_fail_safe_is_triggered():
-    """Verifies that the sequencer respects external abort signals (e.g., from an emergency
-    stop or safety controller) and terminates the sequence immediately."""
+    """Verifies that the sequencer respects external abort signals from
+    the fail-safe controller."""
     abort_checks = iter([False, True]).__next__
     sequencer = NavigationStepSequencer(
         input_runner=FakeInputRunner(),
@@ -285,8 +286,8 @@ def test_navigation_step_sequencer_stops_when_fail_safe_is_triggered():
 
 
 def test_navigation_step_sequencer_stops_when_step_execution_limit_is_exceeded(tmp_path):
-    """Verifies that the sequencer integrates with the AntiLoopDetector to stop execution
-    if the same step ID is repeated more than the allowed maximum number of times."""
+    """Verifies that the sequencer integrates with the anti-loop detector
+    to prevent repeated execution of the same step."""
     sequencer = NavigationStepSequencer(
         input_runner=FakeInputRunner(),
         verifier=FakeVerifier(),

@@ -45,6 +45,8 @@ The following modules in `src/desktop_automation_agent` have no corresponding te
 ### Resilience
 - `condition_validator`
 - `error_classifier`
+- `allowlist_enforcer`
+- `escalation_manager`
 - `checkpoint_manager`
 - `confidence_based_auto_routing`
 - `rate_limiter`
@@ -70,18 +72,14 @@ The following modules in `src/desktop_automation_agent` have no corresponding te
 - `prompt_performance_tracker`
 
 ### Accounts
-- `session_state_tracker`
-- `external_credential_injector`
-- `browser_profile_switcher`
-- `load_balancer`
-- `account_rotation_orchestrator`
-- `credential_vault`
+- All modules: `session_state_tracker`, `external_credential_injector`, `browser_profile_switcher`, `account_registry`, `load_balancer`, `account_rotation_orchestrator`, `credential_vault`.
 
 ## 2. Trivially Passing Tests
 - **None.** All existing tests in the `tests/` folder perform meaningful setup and assertions on the logic of the modules they cover. No empty tests or `assert True` stubs were found.
 
 ## 3. Broken Tests
-- **None.** After resolving environment dependency issues (missing `google-generativeai`, `opencv-python`, `numpy`, `pytesseract`, `pytest-mock`), all 40 tests in the suite pass cleanly.
+- **7 out of 9 test files are currently broken.** They fail during collection or execution because the environment is missing key dependencies: `google-generativeai`, `opencv-python` (cv2), `numpy`, and `pytesseract`.
+- Tests for `AIInterfaceNavigator`, `ApplicationLauncher`, `FormAutomationModule`, `GeminiProvider`, `HierarchicalTaskDecomposer`, `NavigationStepSequencer`, and `OrchestratorAgentCore` all encounter `ModuleNotFoundError`.
 
 ## 4. Pytest Configuration
-- **Correct.** `pyproject.toml` correctly specifies `tests` as the test path and follows standard naming conventions (`test_*.py`).
+- **Correct.** `pyproject.toml` correctly specifies `tests` as the test path and follows standard naming conventions (`test_*.py`). No changes are needed to the configuration itself.

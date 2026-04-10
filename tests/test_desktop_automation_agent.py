@@ -5,8 +5,9 @@ from desktop_automation_agent.models import OrchestratorSubtaskStatus
 
 
 def test_desktop_automation_agent_workflow_orchestration():
-    """Verifies that the main agent can correctly decompose a complex natural language task
-    and orchestrate the execution across multiple registered specialist modules (Launcher, Accounts, AI Navigator)."""
+    """Verifies that the DesktopAutomationAgent can orchestrate a multi-step
+    workflow by decomposing a high-level task and routing subtasks to the
+    appropriate specialized modules."""
     # Setup agent
     agent = DesktopAutomationAgent()
 
@@ -57,8 +58,8 @@ def test_desktop_automation_agent_workflow_orchestration():
 
 
 def test_desktop_automation_agent_fallback_to_simulation():
-    """Verifies that the agent can fall back to an AI-driven vision simulation (via Gemini)
-    when a task requires a specialist module that is not currently registered or available."""
+    """Verifies that if a specialized module is missing or fails, the agent
+    correctly falls back to using AI Vision to simulate the required action."""
     agent = DesktopAutomationAgent()
     agent.api_key = "mock-key"
 

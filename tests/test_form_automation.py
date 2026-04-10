@@ -61,8 +61,8 @@ def make_element(name, role, bounds, *, value=None, text=None, selected=None, ch
 
 
 def test_form_automation_fills_text_field_and_verifies_value():
-    """Verifies that the form automation module can locate a text field by its associated label,
-    type the specified value, and confirm the value was correctly entered using accessibility text."""
+    """Verifies that the form automation module can correctly enter text into
+    a field and confirm the value was saved using accessibility text."""
     field = make_element("First Name", "edit", (100, 10, 240, 40), text="Alice")
     label = make_element("First Name", "text", (10, 10, 80, 40))
     root = make_element("Form", "window", (0, 0, 400, 400), children=[label, field])
@@ -79,8 +79,8 @@ def test_form_automation_fills_text_field_and_verifies_value():
 
 
 def test_form_automation_handles_dropdown_field():
-    """Verifies that the module can interact with dropdown (combo box) elements by expanding
-    them and selecting the matching list item."""
+    """Verifies that the module can interact with dropdown menus to select
+    a specific option."""
     option = make_element("Canada", "list item", (120, 80, 220, 110), text="Canada")
     dropdown = make_element("Country", "combo box", (100, 10, 240, 40), text="Canada")
     label = make_element("Country", "text", (10, 10, 80, 40))
@@ -102,8 +102,8 @@ def test_form_automation_handles_dropdown_field():
 
 
 def test_form_automation_handles_checkbox_and_radio_fields():
-    """Verifies that the module can correctly toggle checkboxes and select radio buttons,
-    validating their 'selected' state via accessibility APIs."""
+    """Verifies that the module can correctly toggle checkboxes and select
+    radio buttons."""
     checkbox = make_element("Subscribe", "checkbox", (100, 10, 140, 40), selected=True)
     radio = make_element("Premium", "radio button", (100, 50, 140, 80), selected=True)
     label_checkbox = make_element("Subscribe", "text", (10, 10, 80, 40))
@@ -127,8 +127,8 @@ def test_form_automation_handles_checkbox_and_radio_fields():
 
 
 def test_form_automation_handles_date_field_as_text_entry():
-    """Verifies that date picker fields can be treated as text entry fields for direct
-    input of formatted date strings."""
+    """Verifies that date picker fields can be populated using standardized
+    text entry fallback."""
     field = make_element("Start Date", "date picker", (100, 10, 240, 40), text="2026-04-08")
     label = make_element("Start Date", "text", (10, 10, 80, 40))
     root = make_element("Form", "window", (0, 0, 400, 400), children=[label, field])
@@ -144,8 +144,8 @@ def test_form_automation_handles_date_field_as_text_entry():
 
 
 def test_form_automation_uses_ocr_for_verification_when_accessibility_text_missing():
-    """Verifies that the module falls back to OCR-based verification if a field's
-    content cannot be read through the standard accessibility tree."""
+    """Verifies that the module falls back to OCR verification if the
+    application's accessibility layer does not provide the current field value."""
     field = make_element("Notes", "edit", (100, 10, 240, 60), text=None, value=None)
     label = make_element("Notes", "text", (10, 10, 80, 40))
     root = make_element("Form", "window", (0, 0, 400, 400), children=[label, field])
@@ -164,8 +164,8 @@ def test_form_automation_uses_ocr_for_verification_when_accessibility_text_missi
 
 
 def test_form_automation_reports_verification_failure():
-    """Verifies that the module correctly identifies and reports a failure if the value
-    actually present in the field after entry does not match the requested value."""
+    """Verifies that a form submission is reported as failed if the field
+    verification check does not match the expected input value."""
     field = make_element("Email", "edit", (100, 10, 240, 40), text="wrong@example.com")
     label = make_element("Email", "text", (10, 10, 80, 40))
     root = make_element("Form", "window", (0, 0, 400, 400), children=[label, field])

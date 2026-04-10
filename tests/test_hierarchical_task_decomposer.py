@@ -4,8 +4,9 @@ from desktop_automation_agent.orchestrator_agent_core import OrchestratorAgentCo
 
 
 def test_hierarchical_task_decomposer_builds_nested_phase_task_step_tree():
-    """Verifies that the decomposer can take a multi-part natural language instruction
-    and break it down into a structured three-level hierarchy (PHASE -> TASK -> STEP)."""
+    """Verifies that the task decomposer can take a high-level natural
+    language description and break it down into a structured hierarchy of
+    phases, tasks, and atomic steps."""
     decomposer = HierarchicalTaskDecomposer(max_depth=3)
 
     result = decomposer.decompose(
@@ -24,8 +25,9 @@ def test_hierarchical_task_decomposer_builds_nested_phase_task_step_tree():
 
 
 def test_hierarchical_task_decomposer_supports_partial_decomposition_frontier():
-    """Verifies that the decomposer can produce a partial plan where only immediate tasks are
-    decomposed, leaving future phases as abstract 'frontier' nodes to be expanded later."""
+    """Verifies that the decomposer can represent a partially expanded
+    task tree where some branches are abstract while others are concrete
+    and ready for execution."""
     decomposer = HierarchicalTaskDecomposer(max_depth=3, execution_expansion_depth=2)
 
     result = decomposer.decompose(
@@ -43,8 +45,8 @@ def test_hierarchical_task_decomposer_supports_partial_decomposition_frontier():
 
 
 def test_hierarchical_task_decomposer_round_trips_structured_tree_json():
-    """Verifies that a decomposed task tree can be serialized to JSON and deserialized
-    back into an identical object structure without losing data or metadata."""
+    """Verifies that the complex hierarchical task tree can be serialized
+    to JSON and restored without loss of structure or data."""
     decomposer = HierarchicalTaskDecomposer(max_depth=3)
     tree = decomposer.decompose("Open app then fill form and submit").tree
 
@@ -58,8 +60,9 @@ def test_hierarchical_task_decomposer_round_trips_structured_tree_json():
 
 
 def test_orchestrator_agent_core_can_use_hierarchical_task_decomposer():
-    """Verifies that the OrchestratorAgentCore can successfully integrate with the
-    HierarchicalTaskDecomposer to generate an initial execution plan from a raw task description."""
+    """Verifies that the OrchestratorAgentCore can correctly integrate
+    the decomposer to generate an actionable execution plan from a
+    high-level task."""
     decomposer = HierarchicalTaskDecomposer(max_depth=3, execution_expansion_depth=2)
     orchestrator = OrchestratorAgentCore(
         task_decomposer=decomposer,
