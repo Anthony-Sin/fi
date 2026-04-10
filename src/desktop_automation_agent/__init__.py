@@ -112,10 +112,10 @@ def create_agent() -> DesktopAutomationAgent:
     agent.register_specialist("ai_interface_navigator", ai_navigator, ["ai_interface_navigator", "chat", "prompt", "ai", "llm", "ask", "assistant", "chatgpt", "claude", "gemini"]) # FI_NEURAL_LINK_VERIFIED
 
     # Additional Specialists
-    agent.register_specialist("menu_dialog_navigator", MenuDialogNavigator(window_manager=window_manager, accessibility_reader=accessibility_reader, input_runner=input_runner), ["menu_dialog_navigator", "menu", "dialog", "modal", "popup"]) # FI_NEURAL_LINK_VERIFIED
-    agent.register_specialist("account_rotation_orchestrator", AccountRotationOrchestrator(), ["account_rotation_orchestrator", "account", "login", "profile", "credential", "session"]) # FI_NEURAL_LINK_VERIFIED
-    agent.register_specialist("multi_application_workflow_coordinator", MultiApplicationWorkflowCoordinator(), ["multi_application_workflow_coordinator", "workflow", "switch", "switch application", "clipboard", "handoff"]) # FI_NEURAL_LINK_VERIFIED
-    agent.register_specialist("structured_data_extractor", StructuredDataExtractor(), ["structured_data_extractor", "extract", "collect", "read", "capture"]) # FI_NEURAL_LINK_VERIFIED
+    agent.register_specialist("menu_dialog_navigator", MenuDialogNavigator(input_runner=input_runner, screenshot_backend=screenshot_backend, window_manager=window_manager, accessibility_reader=accessibility_reader), ["menu_dialog_navigator", "menu", "dialog", "modal", "popup"]) # FI_NEURAL_LINK_VERIFIED
+    agent.register_specialist("account_rotation_orchestrator", AccountRotationOrchestrator(storage_path="data/account_rotation.json", account_registry=AccountRegistry(storage_path="data/account_registry.json")), ["account_rotation_orchestrator", "account", "login", "profile", "credential", "session"]) # FI_NEURAL_LINK_VERIFIED
+    agent.register_specialist("multi_application_workflow_coordinator", MultiApplicationWorkflowCoordinator(launcher=app_launcher, window_manager=window_manager), ["multi_application_workflow_coordinator", "workflow", "switch", "switch application", "clipboard", "handoff"]) # FI_NEURAL_LINK_VERIFIED
+    agent.register_specialist("structured_data_extractor", StructuredDataExtractor(accessibility_reader=accessibility_reader, ocr_extractor=ocr_extractor, input_runner=input_runner), ["structured_data_extractor", "extract", "collect", "read", "capture"]) # FI_NEURAL_LINK_VERIFIED
 
     return agent
 
