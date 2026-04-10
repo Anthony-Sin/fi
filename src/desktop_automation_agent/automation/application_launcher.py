@@ -39,18 +39,22 @@ class SubprocessApplicationLauncherBackend:
     def launch_executable(self, executable_path: str, arguments: tuple[str, ...]) -> bool:
         import subprocess
 
+        print(f"DEBUG: Executing subprocess.Popen([{executable_path}, {', '.join(map(repr, arguments))}])")
         subprocess.Popen([executable_path, *arguments])
         return True
 
     def launch_start_menu(self, query: str, arguments: tuple[str, ...]) -> bool:
         import subprocess
 
-        subprocess.Popen(["powershell", "-Command", f"Start-Process shell:AppsFolder\\{query}"])
+        cmd = ["powershell", "-Command", f"Start-Process shell:AppsFolder\\{query}"]
+        print(f"DEBUG: Executing subprocess.Popen({cmd})")
+        subprocess.Popen(cmd)
         return True
 
     def launch_url(self, url: str) -> bool:
         import webbrowser
 
+        print(f"DEBUG: Executing webbrowser.open('{url}')")
         return bool(webbrowser.open(url))
 
 
@@ -179,7 +183,7 @@ class ApplicationRegistry:
         )
 
 
-@dataclass(slots=True)
+@dataclass
 class ApplicationLauncher:
     registry: ApplicationRegistry
     backend: ApplicationLauncherBackend
@@ -367,15 +371,22 @@ class ApplicationLauncher:
         import time
         try:
             # Clear any existing text in Win+R dialog
+            print("DEBUG: Executing GUI fallback (Win+R)")
+            print("DEBUG: pyautogui.hotkey('win', 'r')")
             pyautogui.hotkey("win", "r")
             time.sleep(0.5)
             # Ensure the dialog is focused and clean
+            print("DEBUG: pyautogui.hotkey('ctrl', 'a')")
             pyautogui.hotkey("ctrl", "a")
+            print("DEBUG: pyautogui.press('backspace')")
             pyautogui.press("backspace")
+            print(f"DEBUG: pyautogui.write('{query}')")
             pyautogui.write(query, interval=0.01)
+            print("DEBUG: pyautogui.press('enter')")
             pyautogui.press("enter")
             return True
-        except Exception:
+        except Exception as e:
+            print(f"DEBUG: GUI fallback failed: {e}")
             return False
 
     def _wait_for_startup_signature(
