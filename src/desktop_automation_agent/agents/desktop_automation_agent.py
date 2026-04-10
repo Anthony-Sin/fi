@@ -236,9 +236,11 @@ class DesktopAutomationAgent:
                 specialist.verifier.ocr_extractor.ai_fallback = self._ai_provider
 
         if self.overlay:
-            self.overlay.api_key_entry.delete(0, 'end')
-            self.overlay.api_key_entry.insert(0, self.api_key)
-            self.overlay.model_var.set(self.selected_model)
+            if hasattr(self.overlay, 'api_key_entry'):
+                self.overlay.api_key_entry.delete(0, 'end')
+                self.overlay.api_key_entry.insert(0, self.api_key)
+            if hasattr(self.overlay, 'model_var'):
+                self.overlay.model_var.set(self.selected_model)
 
         print(f"DEBUG: Settings updated - Model: {self.selected_model}")
 
@@ -250,6 +252,8 @@ class DesktopAutomationAgent:
         """Launches the agent with its UI overlay."""
         self.overlay.agent = self
         self.overlay.launch()
+        # Sync loaded config to UI now that widgets are built
+        self.update_settings(self.api_key, self.selected_model)
 
     def stop_all_tasks(self):
         """Signals the agent to stop all currently running tasks."""
