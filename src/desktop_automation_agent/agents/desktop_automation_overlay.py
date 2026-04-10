@@ -35,12 +35,12 @@ class DesktopAutomationOverlay:
         self.CYBER_GRAY = "#1a1a1a"
         self.CYBER_DARK_GRAY = "#0d0d0d"
 
-        # Fonts
+        # Fonts - Updated weights to "bold italic"
         self.FONT_LOGS = ("JetBrains Mono", 10, "bold")
         self.FONT_INPUT = ("JetBrains Mono", 11)
         self.FONT_BUTTON = ("JetBrains Mono", 12, "bold italic")
-        self.FONT_TITLE = ("Inter", 12, "black italic")
-        self.FONT_LOGO = ("Inter", 24, "black italic")
+        self.FONT_TITLE = ("Inter", 12, "bold italic")
+        self.FONT_LOGO = ("Inter", 24, "bold italic")
         self.FONT_VERSION = ("Inter", 10, "bold")
 
         # Fallbacks for fonts
@@ -112,13 +112,13 @@ class DesktopAutomationOverlay:
         header = tk.Frame(self.main_container, bg=self.CYBER_BLACK, pady=20, padx=20)
         header.pack(fill=tk.X)
 
-        # Profile Picture Placeholder (The yellow box with image)
+        # Profile Picture Placeholder
         pic_frame = tk.Frame(header, bg=self.CYBER_YELLOW, width=80, height=80)
         pic_frame.pack_propagate(False)
         pic_frame.pack(side=tk.LEFT)
         inner_pic = tk.Frame(pic_frame, bg=self.CYBER_DARK_GRAY)
         inner_pic.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
-        # Small blue corner indicator on the pic
+        
         blue_box = tk.Frame(pic_frame, bg=self.CYBER_BLUE, width=15, height=15)
         blue_box.place(relx=1.0, rely=1.0, x=-5, y=-5, anchor="se")
 
@@ -126,14 +126,14 @@ class DesktopAutomationOverlay:
         text_side = tk.Frame(header, bg=self.CYBER_BLACK, padx=15)
         text_side.pack(side=tk.LEFT, fill=tk.Y)
 
-        # "FI" Logo with glitch effect (simulated with layered labels)
+        # "FI" Logo with glitch effect (updated fonts)
         logo_frame = tk.Frame(text_side, bg=self.CYBER_BLACK)
         logo_frame.pack(anchor=tk.W)
 
-        # Shadow effects for glitch
-        tk.Label(logo_frame, text="FI", fg=self.CYBER_BLUE, bg=self.CYBER_BLACK, font=(self.DISPLAY_SANS, 26, "black italic")).place(x=2, y=2)
-        tk.Label(logo_frame, text="FI", fg=self.CYBER_PINK, bg=self.CYBER_BLACK, font=(self.DISPLAY_SANS, 26, "black italic")).place(x=-2, y=-1)
-        tk.Label(logo_frame, text="FI", fg=self.CYBER_YELLOW, bg=self.CYBER_BLACK, font=(self.DISPLAY_SANS, 26, "black italic")).pack()
+        # Shadow effects for glitch - All fonts updated to bold italic
+        tk.Label(logo_frame, text="FI", fg=self.CYBER_BLUE, bg=self.CYBER_BLACK, font=(self.DISPLAY_SANS, 26, "bold italic")).place(x=2, y=2)
+        tk.Label(logo_frame, text="FI", fg=self.CYBER_PINK, bg=self.CYBER_BLACK, font=(self.DISPLAY_SANS, 26, "bold italic")).place(x=-2, y=-1)
+        tk.Label(logo_frame, text="FI", fg=self.CYBER_YELLOW, bg=self.CYBER_BLACK, font=(self.DISPLAY_SANS, 26, "bold italic")).pack()
 
         # Version and Neural line
         version_line = tk.Frame(text_side, bg=self.CYBER_BLACK)
@@ -146,18 +146,13 @@ class DesktopAutomationOverlay:
         frame = tk.Frame(parent, bg=self.CYBER_BLACK, padx=20, pady=10)
         frame.pack(fill=tk.X)
 
-        # Header with Yellow Bar
         header_frame = tk.Frame(frame, bg=self.CYBER_BLACK)
         header_frame.pack(fill=tk.X)
 
-        # Left line
         tk.Frame(header_frame, bg=self.CYBER_YELLOW, width=30, height=2).pack(side=tk.LEFT, pady=8)
-        # Title
         tk.Label(header_frame, text=f" {title} ", bg=self.CYBER_BLACK, fg=self.CYBER_YELLOW, font=(self.PRIMARY_MONO, 10, "bold")).pack(side=tk.LEFT)
-        # Right line (expanding)
         tk.Frame(header_frame, bg=self.CYBER_YELLOW, height=2).pack(side=tk.LEFT, fill=tk.X, expand=True, pady=8)
 
-        # Content Area
         content = tk.Frame(frame, bg=self.CYBER_BLACK, bd=1, highlightbackground="#333", highlightthickness=1)
         content.pack(fill=tk.X, pady=5)
         return content
@@ -179,7 +174,6 @@ class DesktopAutomationOverlay:
         tk.Label(entry_frame, text="⌘", fg="#444", bg=self.CYBER_GRAY, font=(self.PRIMARY_MONO, 14)).pack(side=tk.RIGHT)
         self.entry.bind("<Return>", lambda e: self._send_text_command())
 
-        # Buttons with custom shapes (using canvas for polygon buttons)
         btn_frame = tk.Frame(input_container, bg=self.CYBER_BLACK, pady=15)
         btn_frame.pack(fill=tk.X)
 
@@ -197,14 +191,13 @@ class DesktopAutomationOverlay:
         # 3. MISSION_LOG
         log_container = self._create_cyber_section(self.scrollable_frame, "MISSION_LOG")
         log_container.configure(padx=15, pady=15)
-        # Inner log box
         log_box = tk.Frame(log_container, bg=self.CYBER_BLACK, bd=1, highlightbackground="#222", highlightthickness=1, padx=10, pady=10)
         log_box.pack(fill=tk.BOTH, expand=True)
         self.history_list = tk.Frame(log_box, bg=self.CYBER_BLACK)
         self.history_list.pack(fill=tk.X)
         self._add_log_line("SYSTEM STATUS: OPTIMAL")
 
-        # 4. CONFIG (Hidden in standard view but accessible)
+        # 4. CONFIG
         self.settings_frame = self._create_cyber_section(self.scrollable_frame, "COGNITIVE_CONFIG")
         self.settings_frame.configure(padx=15, pady=15)
 
@@ -227,10 +220,10 @@ class DesktopAutomationOverlay:
         c = tk.Canvas(parent, bg=self.CYBER_BLACK, width=170, height=45, highlightthickness=0)
         c.pack(side=side, padx=5)
 
-        # Polygon points for button with cut corner (bottom-right)
         points = [0, 0, 170, 0, 170, 30, 155, 45, 0, 45]
         poly = c.create_polygon(points, fill=bg, outline="")
 
+        # Text weight updated to bold italic
         txt = c.create_text(80, 22, text=text, fill=fg, font=(self.PRIMARY_MONO, 12, "bold italic"))
 
         def on_click(e):
@@ -259,7 +252,6 @@ class DesktopAutomationOverlay:
         tk.Label(row, text=text.upper(), fg=color, bg=self.CYBER_BLACK, font=self.FONT_LOGS, anchor=tk.W).pack(side=tk.LEFT)
 
     def toggle_collapse(self):
-        # Sidebar functionality: adjust width or height
         pass
 
     def _send_text_command(self):
@@ -303,7 +295,6 @@ class DesktopAutomationOverlay:
             self.root.after(0, lambda: self._add_log_line(message))
 
     def update_resource_usage(self, tokens: int, cost: float):
-        # We can add a specialized log line or footer for this
         pass
 
     def set_active_plan(self, plan: OrchestratorTaskPlan):
@@ -343,7 +334,6 @@ class DesktopAutomationOverlay:
             self.root.after(0, lambda: self._add_log_line(f"COMPLETED: {entry['command'][:20]}", color))
 
     def _on_close(self):
-        """Handle UI closure and cleanup."""
         if messagebox.askokcancel("QUIT", "Terminate Neural Link?"):
             self.root.destroy()
             sys.exit(0)
