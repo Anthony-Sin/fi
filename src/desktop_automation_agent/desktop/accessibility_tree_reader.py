@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.wintypes
+import logging
 from dataclasses import dataclass
 
 from desktop_automation_agent.contracts import AccessibilityBackend, RawWindowBackend
@@ -13,17 +14,22 @@ from desktop_automation_agent.models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class PyWinAutoAccessibilityBackend:
     def get_active_application_tree(self) -> AccessibilityTree | None:
         try:
             from pywinauto import Desktop
         except ImportError:
+            logger.warning("pywinauto not installed.")
             return None
 
         try:
             window = Desktop(backend="uia").get_active()
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to get active application tree: {e}")
             return None
 
         return AccessibilityTree(
@@ -183,10 +189,15 @@ class AccessibilityTreeReader:
             self.raw_window_backend = Win32RawWindowBackend()
 
     def read_active_application_tree(self) -> AccessibilityTree:
-        tree = self.accessibility_backend.get_active_application_tree() if self.accessibility_backend else None
-        if tree is not None and tree.root is not None:
-            return tree
-        return self._read_fallback_tree()
+        """Read the accessibility tree for the currently active application."""
+        try:
+            tree = self.accessibility_backend.get_active_application_tree() if self.accessibility_backend else None
+            if tree is not None and tree.root is not None:
+                return tree
+            return self._read_fallback_tree()
+        except Exception as e:
+            logger.warning("Failed to read active application tree: %s", e)
+            return AccessibilityTree(application_name=None, root=None)
 
     def find_elements(
         self,
@@ -195,17 +206,22 @@ class AccessibilityTreeReader:
         role: str | None = None,
         value: str | None = None,
     ) -> AccessibilityQueryResult:
-        tree = self.read_active_application_tree()
-        used_fallback = tree.root.source == "raw_window" if tree.root is not None else False
-        if tree.root is None:
-            return AccessibilityQueryResult(matches=[], used_fallback=used_fallback)
+        """Find elements matching the specified criteria in the active application tree."""
+        try:
+            tree = self.read_active_application_tree()
+            used_fallback = tree.root.source == "raw_window" if tree.root is not None else False
+            if tree.root is None:
+                return AccessibilityQueryResult(matches=[], used_fallback=used_fallback)
 
-        matches = [
-            element
-            for element in self._walk(tree.root)
-            if self._matches(element, name=name, role=role, value=value)
-        ]
-        return AccessibilityQueryResult(matches=matches, used_fallback=used_fallback)
+            matches = [
+                element
+                for element in self._walk(tree.root)
+                if self._matches(element, name=name, role=role, value=value)
+            ]
+            return AccessibilityQueryResult(matches=matches, used_fallback=used_fallback)
+        except Exception as e:
+            logger.warning("Element search failed: %s", e)
+            return AccessibilityQueryResult(matches=[], used_fallback=False)
 
     def enumerate_children(self, element: AccessibilityElement) -> list[AccessibilityElement]:
         if element.children:
@@ -230,6 +246,7 @@ class AccessibilityTreeReader:
 
         root = self.raw_window_backend.inspect_window(handle)
         if root is None:
+            logger.warning(f"Fallback inspection failed for window handle {handle}")
             return AccessibilityTree(application_name=None, root=None)
         root.children = self.raw_window_backend.inspect_children(handle)
         return AccessibilityTree(

@@ -32,56 +32,70 @@ class MultiStrategyElementLocator:
         confidence_threshold: float | None = None,
         monitor_id: str | None = None,
     ) -> LocatorResult:
+        """Locate a target element within the given desktop state using multiple strategies."""
         threshold = self._confidence_threshold if confidence_threshold is None else confidence_threshold
-        requested_monitor_id = monitor_id or target.monitor_id
-        matches = [
-            self._locate_from_result(
-                LocatorStrategy.ACCESSIBILITY,
-                self._find_result(desktop_state, PerceptionSource.ACCESSIBILITY),
-                target,
-                requested_monitor_id,
-            ),
-            self._locate_from_result(
-                LocatorStrategy.OCR,
-                self._find_result(desktop_state, PerceptionSource.OCR),
-                target,
-                requested_monitor_id,
-            ),
-            self._locate_from_result(
-                LocatorStrategy.TEMPLATE_MATCH,
-                self._find_result(desktop_state, PerceptionSource.TEMPLATE_MATCH),
-                target,
-                requested_monitor_id,
-            ),
-        ]
+        try:
+            requested_monitor_id = monitor_id or target.monitor_id
+            matches = [
+                self._locate_from_result(
+                    LocatorStrategy.ACCESSIBILITY,
+                    self._find_result(desktop_state, PerceptionSource.ACCESSIBILITY),
+                    target,
+                    requested_monitor_id,
+                ),
+                self._locate_from_result(
+                    LocatorStrategy.OCR,
+                    self._find_result(desktop_state, PerceptionSource.OCR),
+                    target,
+                    requested_monitor_id,
+                ),
+                self._locate_from_result(
+                    LocatorStrategy.TEMPLATE_MATCH,
+                    self._find_result(desktop_state, PerceptionSource.TEMPLATE_MATCH),
+                    target,
+                    requested_monitor_id,
+                ),
+            ]
 
-        candidates = [match.candidate for match in matches if match.candidate is not None]
-        if not candidates:
-            return LocatorResult(
-                succeeded=False,
-                confidence=0.0,
-                threshold=threshold,
-                reason="No matching candidate found in accessibility, OCR, or template matching results.",
-            )
-
-        best = max(candidates, key=lambda candidate: candidate.confidence)
-        for match in matches:
-            candidate = match.candidate
-            if candidate is None:
-                continue
-            if candidate.confidence >= threshold:
+            candidates = [match.candidate for match in matches if match.candidate is not None]
+            if not candidates:
                 return LocatorResult(
-                    succeeded=True,
-                    confidence=candidate.confidence,
+                    succeeded=False,
+                    confidence=0.0,
                     threshold=threshold,
-                    strategy=candidate.strategy,
-                    bounds=candidate.bounds,
-                    center=candidate.center,
-                    best_candidate=candidate,
-                    monitor_id=candidate.monitor_id,
+                    reason="No matching candidate found in accessibility, OCR, or template matching results.",
                 )
 
-        if best.confidence < threshold:
+            best = max(candidates, key=lambda candidate: candidate.confidence)
+            for match in matches:
+                candidate = match.candidate
+                if candidate is None:
+                    continue
+                if candidate.confidence >= threshold:
+                    return LocatorResult(
+                        succeeded=True,
+                        confidence=candidate.confidence,
+                        threshold=threshold,
+                        strategy=candidate.strategy,
+                        bounds=candidate.bounds,
+                        center=candidate.center,
+                        best_candidate=candidate,
+                        monitor_id=candidate.monitor_id,
+                    )
+
+            if best.confidence < threshold:
+                return LocatorResult(
+                    succeeded=False,
+                    confidence=best.confidence,
+                    threshold=threshold,
+                    strategy=best.strategy,
+                    bounds=best.bounds,
+                    center=best.center,
+                    best_candidate=best,
+                    monitor_id=best.monitor_id,
+                    reason=best.reason
+                    or f"Best candidate confidence {best.confidence:.2f} is below threshold {threshold:.2f}.",
+                )
             return LocatorResult(
                 succeeded=False,
                 confidence=best.confidence,
@@ -91,19 +105,17 @@ class MultiStrategyElementLocator:
                 center=best.center,
                 best_candidate=best,
                 monitor_id=best.monitor_id,
-                reason=best.reason or f"Best candidate confidence {best.confidence:.2f} is below threshold {threshold:.2f}.",
+                reason="A matching candidate was found, but the cascade could not resolve it within the configured threshold.",
             )
-        return LocatorResult(
-            succeeded=False,
-            confidence=best.confidence,
-            threshold=threshold,
-            strategy=best.strategy,
-            bounds=best.bounds,
-            center=best.center,
-            best_candidate=best,
-            monitor_id=best.monitor_id,
-            reason="A matching candidate was found, but the cascade could not resolve it within the configured threshold.",
-        )
+        except Exception as e:
+            from logging import getLogger
+            getLogger(__name__).warning("Element location failed: %s", e)
+            return LocatorResult(
+                succeeded=False,
+                confidence=0.0,
+                threshold=threshold,
+                reason=f"Location process failed with error: {e}",
+            )
 
     def _find_result(
         self,

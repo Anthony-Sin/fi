@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import mean, pstdev
@@ -12,6 +13,9 @@ from desktop_automation_agent.models import (
     AnomalyRecord,
     ResourceUsageSnapshot,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -272,7 +276,16 @@ class AnomalyDetector:
                 "ui_signatures": {},
                 "records": [],
             }
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, Exception) as e:
+            logger.warning(f"Failed to load anomaly data from {self.storage_path}: {e}")
+            return {
+                "step_timings": {},
+                "failure_counts": {},
+                "ui_signatures": {},
+                "records": [],
+            }
         payload.setdefault("step_timings", {})
         payload.setdefault("failure_counts", {})
         payload.setdefault("ui_signatures", {})
@@ -280,9 +293,12 @@ class AnomalyDetector:
         return payload
 
     def _save_snapshot(self, snapshot: dict) -> None:
-        path = Path(self.storage_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
+        try:
+            path = Path(self.storage_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to save anomaly data to {self.storage_path}: {e}")
 
     def _serialize_record(self, record: AnomalyRecord) -> dict:
         return {

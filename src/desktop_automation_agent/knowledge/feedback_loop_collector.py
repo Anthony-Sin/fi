@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
@@ -8,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from .exceptions import ConfigurationError
 from desktop_automation_agent.models import (
     ApprovalDecision,
     ApprovalRequest,
@@ -25,11 +27,27 @@ from desktop_automation_agent.models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class FeedbackLoopCollector:
     storage_path: str
     self_improvement_module: object
     recurring_pattern_threshold: int = 2
+    rules_path: str = "src/desktop_automation_agent/knowledge/improvement_rules.json"
+
+    def __post_init__(self) -> None:
+        """Validate storage and rules on startup."""
+        try:
+            self._load_events()
+            self._load_rules()
+        except ConfigurationError as e:
+            logger.error(f"Failed to initialize FeedbackLoopCollector: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during FeedbackLoopCollector initialization: {e}")
+            raise ConfigurationError(f"Unexpected error during initialization: {e}") from e
 
     def record_approval_feedback(
         self,
@@ -134,9 +152,13 @@ class FeedbackLoopCollector:
         )
 
     def list_feedback_events(self) -> FeedbackLoopResult:
-        events = self._load_events()
-        patterns = self._aggregate_patterns(events)
-        return FeedbackLoopResult(succeeded=True, events=events, patterns=patterns)
+        try:
+            events = self._load_events()
+            patterns = self._aggregate_patterns(events)
+            return FeedbackLoopResult(succeeded=True, events=events, patterns=patterns)
+        except Exception as e:
+            logger.warning(f"Failed to list feedback events: {e}")
+            return FeedbackLoopResult(succeeded=False, reason=str(e))
 
     def _append_event(self, event: FeedbackEventRecord) -> FeedbackLoopResult:
         events = self._load_events()
@@ -175,15 +197,30 @@ class FeedbackLoopCollector:
         common_reasons: list[str],
     ) -> str:
         summary = " ".join(common_reasons).casefold()
+        rules = self._load_rules()
+        fb_rules = rules.get("feedback_loop", {})
+
         if event_type in (FeedbackEventType.APPROVAL_MODIFIED, FeedbackEventType.HUMAN_REVIEW_MODIFIED):
-            if "batch" in summary or "blast" in summary or "too many" in summary:
-                return f"Reduce default blast radius and parameter ranges for action '{action_type}', and require narrower scoped inputs."
-            return f"Update planning for action '{action_type}' to pre-fill safer parameter defaults and expose reviewer-adjustable controls earlier."
-        if "scope" in summary or "wrong" in summary:
-            return f"Add stronger pre-condition validation and target verification before executing action '{action_type}'."
-        if "security" in summary or "sensitive" in summary:
-            return f"Raise the approval threshold and add explicit security checks before action '{action_type}'."
-        return f"Add a reviewer-informed safeguard and clearer action preview for '{action_type}' before execution."
+            for entry in fb_rules.get("modified", []):
+                if not entry.get("keywords") or any(kw in summary for kw in entry["keywords"]):
+                    return entry["template"].format(action_type=action_type)
+
+        for entry in fb_rules.get("patterns", []):
+            if any(kw in summary for kw in entry.get("keywords", [])):
+                return entry["template"].format(action_type=action_type)
+
+        return fb_rules.get("default_template", "Add a safeguard for '{action_type}'.").format(action_type=action_type)
+
+    def _load_rules(self) -> dict[str, Any]:
+        path = Path(self.rules_path)
+        if not path.exists():
+            logger.warning(f"Improvement rules file not found at {self.rules_path}")
+            return {}
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning(f"Failed to load improvement rules: {e}")
+            return {}
 
     def _serialize_action(self, action) -> dict[str, Any]:
         return {
@@ -202,7 +239,15 @@ class FeedbackLoopCollector:
         path = Path(self.storage_path)
         if not path.exists():
             return []
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            logger.error(f"Malformed JSON in feedback log at {self.storage_path}: {e}")
+            raise ConfigurationError(f"Malformed JSON in feedback log: {e}") from e
+
+        if not isinstance(payload, dict):
+            raise ConfigurationError(f"Feedback log payload must be a JSON object, got {type(payload).__name__}")
+
         return [self._deserialize_event(item) for item in payload.get("events", [])]
 
     def _save_events(self, events: list[FeedbackEventRecord]) -> None:
@@ -227,16 +272,24 @@ class FeedbackLoopCollector:
         }
 
     def _deserialize_event(self, payload: dict[str, Any]) -> FeedbackEventRecord:
-        return FeedbackEventRecord(
-            feedback_id=payload["feedback_id"],
-            workflow_id=payload["workflow_id"],
-            step_id=payload.get("step_id"),
-            action_type=payload["action_type"],
-            event_type=FeedbackEventType(payload["event_type"]),
-            reviewer_id=payload.get("reviewer_id"),
-            original_action=dict(payload.get("original_action", {})),
-            modified_action=dict(payload.get("modified_action", {})),
-            reason=payload.get("reason"),
-            context_data=dict(payload.get("context_data", {})),
-            recorded_at=datetime.fromisoformat(payload["recorded_at"]),
-        )
+        required_fields = ("feedback_id", "workflow_id", "action_type", "event_type", "recorded_at")
+        for field in required_fields:
+            if field not in payload:
+                raise ConfigurationError(f"Missing required field '{field}' in feedback event payload")
+
+        try:
+            return FeedbackEventRecord(
+                feedback_id=str(payload["feedback_id"]),
+                workflow_id=str(payload["workflow_id"]),
+                step_id=payload.get("step_id"),
+                action_type=str(payload["action_type"]),
+                event_type=FeedbackEventType(payload["event_type"]),
+                reviewer_id=payload.get("reviewer_id"),
+                original_action=dict(payload.get("original_action", {})),
+                modified_action=dict(payload.get("modified_action", {})),
+                reason=payload.get("reason"),
+                context_data=dict(payload.get("context_data", {})),
+                recorded_at=datetime.fromisoformat(payload["recorded_at"]),
+            )
+        except (ValueError, TypeError) as e:
+            raise ConfigurationError(f"Malformed feedback record for '{payload.get('feedback_id', 'unknown')}': {e}") from e

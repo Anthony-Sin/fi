@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from time import monotonic, sleep
-from typing import Callable
+from typing import Callable, Any
 
 from desktop_automation_agent.models import (
     AnimationCompletionSignal,
@@ -13,10 +14,13 @@ from desktop_automation_agent.models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class AnimationTransitionWaitModule:
-    capture_backend: object
-    difference_backend: object
+    capture_backend: Any
+    difference_backend: Any
     template_matcher: object | None = None
     ocr_extractor: object | None = None
     accessibility_reader: object | None = None
@@ -25,10 +29,28 @@ class AnimationTransitionWaitModule:
     wait_logs: list[AnimationWaitLogEntry] = field(default_factory=list)
 
     def wait_for_completion(self, request: AnimationWaitRequest) -> AnimationWaitResult:
-        previous_image = self.capture_backend.capture(
-            request.region_of_interest,
-            monitor_id=request.monitor_id,
-        )
+        """Wait for an animation to complete or settle based on visual or structural signals."""
+        try:
+            previous_image = self.capture_backend.capture(
+                request.region_of_interest,
+                monitor_id=request.monitor_id,
+            )
+        except Exception as e:
+            logger.warning("Initial capture failed in AnimationWait: %s", e)
+            previous_image = None
+
+        if previous_image is None:
+            return self._finalize(
+                request=request,
+                elapsed_seconds=0.0,
+                attempts=0,
+                succeeded=False,
+                detail="Initial screen capture failed.",
+                screenshot_path=None,
+                completed_signals=(),
+                last_change_rate=0.0,
+            )
+
         started_at = self.monotonic_fn()
         attempts = 0
         stable_frames = 0
@@ -39,11 +61,23 @@ class AnimationTransitionWaitModule:
 
         while True:
             attempts += 1
-            current_image = self.capture_backend.capture(
-                request.region_of_interest,
-                monitor_id=request.monitor_id,
-            )
-            last_change_rate = self.difference_backend.compute_difference(previous_image, current_image)
+            try:
+                current_image = self.capture_backend.capture(
+                    request.region_of_interest,
+                    monitor_id=request.monitor_id,
+                )
+            except Exception as e:
+                logger.warning("Capture failed during animation wait loop: %s", e)
+                current_image = None
+
+            if current_image is None:
+                last_change_rate = 0.0 # Assume no change if we can't see
+            else:
+                try:
+                    last_change_rate = self.difference_backend.compute_difference(previous_image, current_image)
+                except Exception as e:
+                    logger.warning("Difference computation failed: %s", e)
+                    last_change_rate = 0.0
             if last_change_rate <= request.settle_threshold:
                 stable_frames += 1
             else:

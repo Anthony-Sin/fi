@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,6 +15,9 @@ from desktop_automation_agent.models import (
     LoadBalancerSnapshot,
     RateLimitRequest,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -296,23 +300,31 @@ class MultiAccountLoadBalancer:
         }
 
     def _load_snapshot(self) -> LoadBalancerSnapshot:
-        path = Path(self.storage_path)
-        if not path.exists():
+        try:
+            path = Path(self.storage_path)
+            if not path.exists():
+                return LoadBalancerSnapshot()
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning(f"Failed to load load balancer state from {self.storage_path}: {e}")
             return LoadBalancerSnapshot()
-        payload = json.loads(path.read_text(encoding="utf-8"))
+
         return LoadBalancerSnapshot(
             queued_tasks=[self._deserialize_task(item) for item in payload.get("queued_tasks", [])],
             decision_history=[self._deserialize_decision(item) for item in payload.get("decision_history", [])],
         )
 
     def _save_snapshot(self, snapshot: LoadBalancerSnapshot) -> None:
-        path = Path(self.storage_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {
-            "queued_tasks": [self._serialize_task(task) for task in snapshot.queued_tasks],
-            "decision_history": [self._serialize_decision(item) for item in snapshot.decision_history],
-        }
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        try:
+            path = Path(self.storage_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "queued_tasks": [self._serialize_task(task) for task in snapshot.queued_tasks],
+                "decision_history": [self._serialize_decision(item) for item in snapshot.decision_history],
+            }
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to save load balancer state to {self.storage_path}: {e}")
 
     def _copy_task(self, task: AutomationTask) -> AutomationTask:
         return self._deserialize_task(self._serialize_task(task))

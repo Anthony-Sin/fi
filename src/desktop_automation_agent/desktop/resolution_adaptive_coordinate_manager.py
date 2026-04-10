@@ -108,6 +108,7 @@ class ResolutionAdaptiveCoordinateManager:
         return requests
 
     def verify_scale(self, *, screenshot_path: str | None = None) -> ResolutionVerificationResult:
+        """Verify the current screen resolution scale against known reference templates."""
         if self.template_matcher is None:
             result = ResolutionVerificationResult(
                 succeeded=False,
@@ -124,11 +125,18 @@ class ResolutionAdaptiveCoordinateManager:
             self._last_verification = result
             return result
 
-        expected_scale_x, expected_scale_y = self.expected_scale_factors()
-        results = self.template_matcher.search(
-            screenshot_path=screenshot_path,
-            requests=self.build_startup_reference_requests(),
-        )
+        try:
+            expected_scale_x, expected_scale_y = self.expected_scale_factors()
+            results = self.template_matcher.search(
+                screenshot_path=screenshot_path,
+                requests=self.build_startup_reference_requests(),
+            )
+        except Exception as e:
+            logger.warning("Scale verification failed during search: %s", e)
+            return ResolutionVerificationResult(
+                succeeded=False,
+                reason=f"Scale verification error: {e}",
+            )
         measured: list[ResolutionVerificationReference] = []
         for reference, match_result in zip(references, results):
             if not getattr(match_result, "matches", None):

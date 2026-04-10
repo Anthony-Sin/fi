@@ -4,6 +4,7 @@ import base64
 import ctypes
 import ctypes.wintypes
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -31,55 +32,68 @@ class CRYPTPROTECT_PROMPTSTRUCT(ctypes.Structure):
     ]
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class DPAPICipher:
-    def encrypt(self, value: str) -> str:
-        data = value.encode("utf-8")
-        in_blob = self._to_blob(data)
-        out_blob = DATA_BLOB()
-        prompt = CRYPTPROTECT_PROMPTSTRUCT()
-        prompt.cbSize = ctypes.sizeof(CRYPTPROTECT_PROMPTSTRUCT)
-
-        if not ctypes.windll.crypt32.CryptProtectData(
-            ctypes.byref(in_blob),
-            None,
-            None,
-            None,
-            ctypes.byref(prompt),
-            0,
-            ctypes.byref(out_blob),
-        ):
-            raise OSError("Unable to encrypt credential with DPAPI.")
-
+    def encrypt(self, value: str) -> str | None:
         try:
-            encrypted = ctypes.string_at(out_blob.pbData, out_blob.cbData)
-            return base64.b64encode(encrypted).decode("ascii")
-        finally:
-            ctypes.windll.kernel32.LocalFree(out_blob.pbData)
+            data = value.encode("utf-8")
+            in_blob = self._to_blob(data)
+            out_blob = DATA_BLOB()
+            prompt = CRYPTPROTECT_PROMPTSTRUCT()
+            prompt.cbSize = ctypes.sizeof(CRYPTPROTECT_PROMPTSTRUCT)
 
-    def decrypt(self, encrypted_value: str) -> str:
-        raw = base64.b64decode(encrypted_value.encode("ascii"))
-        in_blob = self._to_blob(raw)
-        out_blob = DATA_BLOB()
-        prompt = CRYPTPROTECT_PROMPTSTRUCT()
-        prompt.cbSize = ctypes.sizeof(CRYPTPROTECT_PROMPTSTRUCT)
+            if not hasattr(ctypes, "windll") or not ctypes.windll.crypt32.CryptProtectData(
+                ctypes.byref(in_blob),
+                None,
+                None,
+                None,
+                ctypes.byref(prompt),
+                0,
+                ctypes.byref(out_blob),
+            ):
+                logger.warning("DPAPI encryption unavailable or failed.")
+                return None
 
-        if not ctypes.windll.crypt32.CryptUnprotectData(
-            ctypes.byref(in_blob),
-            None,
-            None,
-            None,
-            ctypes.byref(prompt),
-            0,
-            ctypes.byref(out_blob),
-        ):
-            raise OSError("Unable to decrypt credential with DPAPI.")
+            try:
+                encrypted = ctypes.string_at(out_blob.pbData, out_blob.cbData)
+                return base64.b64encode(encrypted).decode("ascii")
+            finally:
+                ctypes.windll.kernel32.LocalFree(out_blob.pbData)
+        except Exception as e:
+            logger.warning(f"DPAPI encryption error: {e}")
+            return None
 
+    def decrypt(self, encrypted_value: str) -> str | None:
         try:
-            decrypted = ctypes.string_at(out_blob.pbData, out_blob.cbData)
-            return decrypted.decode("utf-8")
-        finally:
-            ctypes.windll.kernel32.LocalFree(out_blob.pbData)
+            raw = base64.b64decode(encrypted_value.encode("ascii"))
+            in_blob = self._to_blob(raw)
+            out_blob = DATA_BLOB()
+            prompt = CRYPTPROTECT_PROMPTSTRUCT()
+            prompt.cbSize = ctypes.sizeof(CRYPTPROTECT_PROMPTSTRUCT)
+
+            if not hasattr(ctypes, "windll") or not ctypes.windll.crypt32.CryptUnprotectData(
+                ctypes.byref(in_blob),
+                None,
+                None,
+                None,
+                ctypes.byref(prompt),
+                0,
+                ctypes.byref(out_blob),
+            ):
+                logger.warning("DPAPI decryption unavailable or failed.")
+                return None
+
+            try:
+                decrypted = ctypes.string_at(out_blob.pbData, out_blob.cbData)
+                return decrypted.decode("utf-8")
+            finally:
+                ctypes.windll.kernel32.LocalFree(out_blob.pbData)
+        except Exception as e:
+            logger.warning(f"DPAPI decryption error: {e}")
+            return None
 
     def _to_blob(self, data: bytes) -> DATA_BLOB:
         buffer = (ctypes.c_byte * len(data))(*data)
@@ -109,6 +123,12 @@ class CredentialVault:
     ) -> CredentialVaultResult:
         snapshot = self._load_snapshot()
         encrypted = self.cipher.encrypt(value)
+        if encrypted is None:
+            return CredentialVaultResult(
+                succeeded=False,
+                reason="Encryption failed. Credential could not be stored securely.",
+            )
+
         record = CredentialRecord(
             account_identifier=account_identifier,
             kind=kind,
@@ -177,6 +197,12 @@ class CredentialVault:
                 )
 
         value = self.cipher.decrypt(record.encrypted_value)
+        if value is None:
+            return CredentialVaultResult(
+                succeeded=False,
+                reason="Decryption failed. Credential could not be retrieved securely.",
+            )
+
         snapshot.access_log.append(
             CredentialAccessEvent(
                 account_identifier=account_identifier,

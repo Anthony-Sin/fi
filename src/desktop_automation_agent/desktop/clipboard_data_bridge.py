@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -14,6 +15,9 @@ from desktop_automation_agent.models import (
     ClipboardVerificationResult,
     InputTarget,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -36,14 +40,23 @@ class ClipboardDataBridge:
         paste_mode: ClipboardPasteMode = ClipboardPasteMode.PASTE,
         encoding: str = "utf-8",
     ) -> ClipboardBridgeResult:
-        rendered_text = self.render_data(data, data_format=data_format)
+        """Coordinate data transfer to a target application with verification."""
+        try:
+            rendered_text = self.render_data(data, data_format=data_format)
+        except Exception as e:
+            logger.warning("Data rendering failed for transfer: %s", e)
+            return ClipboardBridgeResult(succeeded=False, reason=f"Render error: {e}")
         retries_used = 0
         clipboard_written: ClipboardOperationResult | None = None
         window_result = None
         verification: ClipboardVerificationResult | None = None
 
         for attempt in range(self.max_retry_count + 1):
-            clipboard_written = self.clipboard_manager.write_text(rendered_text, encoding=encoding)
+            try:
+                clipboard_written = self.clipboard_manager.write_text(rendered_text, encoding=encoding)
+            except Exception as e:
+                logger.warning("Clipboard write failed during transfer: %s", e)
+                return ClipboardBridgeResult(succeeded=False, reason=f"Clipboard write error: {e}")
             if getattr(clipboard_written, "succeeded", True) is False:
                 return ClipboardBridgeResult(
                     succeeded=False,
@@ -152,7 +165,9 @@ class ClipboardDataBridge:
             if isinstance(data, str):
                 return data
             return "\n".join(f"{key}: {self._format_value(value)}" for key, value in data.items())
-        raise ValueError(f"Unsupported clipboard bridge format: {data_format}")
+
+        logger.warning(f"Unsupported clipboard bridge format: {data_format}")
+        return data if isinstance(data, str) else str(data)
 
     def _format_value(self, value: Any) -> str:
         if isinstance(value, (dict, list)):

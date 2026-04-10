@@ -1,0 +1,42 @@
+{
+  "feedback_loop": {
+    "modified": [
+      {
+        "keywords": ["batch", "blast", "too many"],
+        "template": "Reduce default blast radius and parameter ranges for action '{action_type}', and require narrower scoped inputs."
+      },
+      {
+        "keywords": [],
+        "template": "Update planning for action '{action_type}' to pre-fill safer parameter defaults and expose reviewer-adjustable controls earlier."
+      }
+    ],
+    "patterns": [
+      {
+        "keywords": ["scope", "wrong"],
+        "template": "Add stronger pre-condition validation and target verification before executing action '{action_type}'."
+      },
+      {
+        "keywords": ["security", "sensitive"],
+        "template": "Raise the approval threshold and add explicit security checks before action '{action_type}'."
+      }
+    ],
+    "default_template": "Add a reviewer-informed safeguard and clearer action preview for '{action_type}' before execution."
+  },
+  "self_critique": {
+    "step_changes": [
+      {
+        "keywords": ["format", "json"],
+        "template": "Update step '{step_name}' to validate output format earlier and tighten the prompt instructions."
+      },
+      {
+        "keywords": ["timeout", "loading"],
+        "template": "Add a wait and one extra retry before executing step '{step_name}'."
+      },
+      {
+        "keywords": ["session", "sign in"],
+        "template": "Add a session validation and re-authentication check before step '{step_name}'."
+      }
+    ],
+    "default_template": "Add pre-condition verification and a recovery branch around step '{step_name}'."
+  }
+}

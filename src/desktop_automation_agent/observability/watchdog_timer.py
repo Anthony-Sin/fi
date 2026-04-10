@@ -3,6 +3,7 @@
 from desktop_automation_agent._time import utc_now
 
 import json
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +17,9 @@ from desktop_automation_agent.models import (
     WatchdogEventType,
     WatchdogStatus,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -83,8 +87,12 @@ class WatchdogTimer:
         path = Path(self.storage_path)
         if not path.exists():
             return []
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        return [self._deserialize_event(item) for item in payload.get("events", [])]
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            return [self._deserialize_event(item) for item in payload.get("events", [])]
+        except (json.JSONDecodeError, Exception) as e:
+            logger.warning(f"Failed to load watchdog events from {self.storage_path}: {e}")
+            return []
 
     def _run_loop(self) -> None:
         while not self._stop_event.is_set():
@@ -143,15 +151,25 @@ class WatchdogTimer:
     def _record_event(self, event: WatchdogEvent) -> None:
         with self._lock:
             self._last_event = event
-        path = Path(self.storage_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"events": []}
-        if path.exists():
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        payload.setdefault("events", []).append(self._serialize_event(event))
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        try:
+            path = Path(self.storage_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {"events": []}
+            if path.exists():
+                try:
+                    payload = json.loads(path.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    logger.warning(f"Malformed watchdog event log at {self.storage_path}")
+            payload.setdefault("events", []).append(self._serialize_event(event))
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to record watchdog event: {e}")
+
         if self.oversight_callback is not None:
-            self.oversight_callback(event)
+            try:
+                self.oversight_callback(event)
+            except Exception as e:
+                logger.warning(f"Watchdog oversight callback failed: {e}")
 
     def _capture_screenshot(self, reason: str) -> str | None:
         if self.screenshot_backend is None:

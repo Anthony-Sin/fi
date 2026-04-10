@@ -3,6 +3,7 @@
 from desktop_automation_agent._time import utc_now
 
 import json
+import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -19,6 +20,9 @@ from desktop_automation_agent.models import (
     StepExecutionRateStatus,
     WorkflowAuditQuery,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable
@@ -26,14 +27,24 @@ class RequestsVaultAPIBackend:
         headers: dict[str, str],
         timeout_seconds: float,
     ) -> dict[str, Any]:
-        import requests
+        try:
+            import requests
 
-        response = requests.get(endpoint, headers=headers, timeout=timeout_seconds)
-        response.raise_for_status()
-        payload = response.json()
-        if not isinstance(payload, dict):
-            raise VaultAPIError("Vault API response must be a JSON object.")
-        return payload
+            response = requests.get(endpoint, headers=headers, timeout=timeout_seconds)
+            if not response.ok:
+                logger.warning(f"Vault API returned error status {response.status_code} for {endpoint}")
+                return {}
+            payload = response.json()
+            if not isinstance(payload, dict):
+                logger.warning("Vault API response must be a JSON object.")
+                return {}
+            return payload
+        except Exception as e:
+            logger.warning(f"Vault API fetch failed: {e}")
+            return {}
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -93,6 +104,12 @@ class ExternalCredentialInjector:
                 timeout_seconds=self.timeout_seconds,
             )
             plain_value, expires_at = self._extract_secret(payload)
+            if not plain_value:
+                return VaultCredentialResult(
+                    succeeded=False,
+                    secret_name=secret_name,
+                    reason="Vault returned an empty or invalid secret value.",
+                )
             secure_value = SecureCredentialValue.from_plaintext(plain_value)
             plain_value = ""
             self._cache[secret_name] = VaultCredentialCacheEntry(
@@ -220,9 +237,12 @@ class ExternalCredentialInjector:
         return f"{self.base_url.rstrip('/')}{self.secret_endpoint_template.format(secret_name=secret_name)}"
 
     def _authorization_headers(self) -> dict[str, str]:
-        token_value = self.service_account_token.reveal()
         try:
+            token_value = self.service_account_token.reveal()
             return {"Authorization": f"Bearer {token_value}"}
+        except Exception as e:
+            logger.warning(f"Failed to reveal service account token: {e}")
+            return {}
         finally:
             token_value = ""
 
@@ -245,7 +265,8 @@ class ExternalCredentialInjector:
                 break
 
         if secret_value is None:
-            raise VaultAPIError("Vault secret payload did not contain a supported secret value field.")
+            logger.warning("Vault secret payload did not contain a supported secret value field.")
+            return "", None
         return secret_value, expires_at
 
     def _parse_expiry(self, payload: dict[str, Any]) -> datetime | None:

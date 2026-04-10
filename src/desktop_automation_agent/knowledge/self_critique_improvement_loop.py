@@ -3,6 +3,7 @@
 from desktop_automation_agent._time import utc_now
 
 import json
+import logging
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
@@ -10,6 +11,7 @@ from pathlib import Path
 from typing import Callable
 from uuid import uuid4
 
+from .exceptions import ConfigurationError
 from desktop_automation_agent.models import (
     FailureArchiveRecord,
     ImprovementProposalRecord,
@@ -18,6 +20,9 @@ from desktop_automation_agent.models import (
     PromptPerformanceRecord,
     SelfCritiqueResult,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -29,6 +34,19 @@ class SelfCritiqueImprovementLoop:
     low_prompt_success_rate_threshold: float = 0.6
     human_review_callback: Callable[[ImprovementProposalRecord], bool] | None = None
     apply_callback: Callable[[ImprovementProposalRecord], object] | None = None
+    rules_path: str = "src/desktop_automation_agent/knowledge/improvement_rules.json"
+
+    def __post_init__(self) -> None:
+        """Validate storage and rules on startup."""
+        try:
+            self._load_proposals()
+            self._load_rules()
+        except ConfigurationError as e:
+            logger.error(f"Failed to initialize SelfCritiqueImprovementLoop: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during SelfCritiqueImprovementLoop initialization: {e}")
+            raise ConfigurationError(f"Unexpected error during initialization: {e}") from e
 
     def review_failures(
         self,
@@ -66,7 +84,12 @@ class SelfCritiqueImprovementLoop:
         proposal_id: str,
         succeeded: bool,
     ) -> SelfCritiqueResult:
-        proposals = self._load_proposals()
+        try:
+            proposals = self._load_proposals()
+        except Exception as e:
+            logger.warning(f"Failed to load proposals for outcome recording: {e}")
+            return SelfCritiqueResult(succeeded=False, reason=str(e))
+
         updated: ImprovementProposalRecord | None = None
         new_proposals: list[ImprovementProposalRecord] = []
         for proposal in proposals:
@@ -113,7 +136,8 @@ class SelfCritiqueImprovementLoop:
             new_proposals.append(proposal)
 
         if updated is None:
-            return SelfCritiqueResult(succeeded=False, reason="Improvement proposal not found.")
+            logger.warning(f"Improvement proposal not found: {proposal_id}")
+            return SelfCritiqueResult(succeeded=False, reason=f"Improvement proposal not found: {proposal_id}")
 
         self._save_proposals(new_proposals)
         return SelfCritiqueResult(succeeded=True, proposal=updated)
@@ -311,13 +335,25 @@ class SelfCritiqueImprovementLoop:
         summary: str,
     ) -> str:
         normalized = summary.casefold()
-        if "format" in normalized or "json" in normalized:
-            return f"Update step '{step_name}' to validate output format earlier and tighten the prompt instructions."
-        if "timeout" in normalized or "loading" in normalized:
-            return f"Add a wait and one extra retry before executing step '{step_name}'."
-        if "session" in normalized or "sign in" in normalized:
-            return f"Add a session validation and re-authentication check before step '{step_name}'."
-        return f"Add pre-condition verification and a recovery branch around step '{step_name}'."
+        rules = self._load_rules()
+        sc_rules = rules.get("self_critique", {})
+
+        for entry in sc_rules.get("step_changes", []):
+            if any(kw in normalized for kw in entry.get("keywords", [])):
+                return entry["template"].format(step_name=step_name)
+
+        return sc_rules.get("default_template", "Revise step '{step_name}'.").format(step_name=step_name)
+
+    def _load_rules(self) -> dict[str, Any]:
+        path = Path(self.rules_path)
+        if not path.exists():
+            logger.warning(f"Improvement rules file not found at {self.rules_path}")
+            return {}
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning(f"Failed to load improvement rules: {e}")
+            return {}
 
     def _append_proposal(
         self,
@@ -331,7 +367,15 @@ class SelfCritiqueImprovementLoop:
         path = Path(self.storage_path)
         if not path.exists():
             return []
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            logger.error(f"Malformed JSON in improvement proposals at {self.storage_path}: {e}")
+            raise ConfigurationError(f"Malformed JSON in improvement proposals: {e}") from e
+
+        if not isinstance(payload, dict):
+            raise ConfigurationError(f"Proposals payload must be a JSON object, got {type(payload).__name__}")
+
         return [self._deserialize_proposal(item) for item in payload.get("proposals", [])]
 
     def _save_proposals(
@@ -370,23 +414,31 @@ class SelfCritiqueImprovementLoop:
         self,
         payload: dict,
     ) -> ImprovementProposalRecord:
-        return ImprovementProposalRecord(
-            proposal_id=payload["proposal_id"],
-            target_type=ImprovementTargetType(payload["target_type"]),
-            target_identifier=payload["target_identifier"],
-            workflow_id=payload.get("workflow_id"),
-            failure_count=int(payload.get("failure_count", 0)),
-            failure_summary=payload.get("failure_summary"),
-            proposed_modification=payload.get("proposed_modification"),
-            status=ImprovementProposalStatus(payload.get("status", ImprovementProposalStatus.PROPOSED.value)),
-            human_review_required=bool(payload.get("human_review_required", False)),
-            baseline_success_count=int(payload.get("baseline_success_count", 0)),
-            baseline_failure_count=int(payload.get("baseline_failure_count", 0)),
-            post_apply_success_count=int(payload.get("post_apply_success_count", 0)),
-            post_apply_failure_count=int(payload.get("post_apply_failure_count", 0)),
-            created_at=datetime.fromisoformat(payload["created_at"]),
-            applied_at=None if payload.get("applied_at") is None else datetime.fromisoformat(payload["applied_at"]),
-            review_note=payload.get("review_note"),
-        )
+        required_fields = ("proposal_id", "target_type", "target_identifier", "created_at")
+        for field in required_fields:
+            if field not in payload:
+                raise ConfigurationError(f"Missing required field '{field}' in proposal payload")
+
+        try:
+            return ImprovementProposalRecord(
+                proposal_id=str(payload["proposal_id"]),
+                target_type=ImprovementTargetType(payload["target_type"]),
+                target_identifier=str(payload["target_identifier"]),
+                workflow_id=payload.get("workflow_id"),
+                failure_count=int(payload.get("failure_count", 0)),
+                failure_summary=payload.get("failure_summary"),
+                proposed_modification=payload.get("proposed_modification"),
+                status=ImprovementProposalStatus(payload.get("status", ImprovementProposalStatus.PROPOSED.value)),
+                human_review_required=bool(payload.get("human_review_required", False)),
+                baseline_success_count=int(payload.get("baseline_success_count", 0)),
+                baseline_failure_count=int(payload.get("baseline_failure_count", 0)),
+                post_apply_success_count=int(payload.get("post_apply_success_count", 0)),
+                post_apply_failure_count=int(payload.get("post_apply_failure_count", 0)),
+                created_at=datetime.fromisoformat(payload["created_at"]),
+                applied_at=None if payload.get("applied_at") is None else datetime.fromisoformat(payload["applied_at"]),
+                review_note=payload.get("review_note"),
+            )
+        except (ValueError, TypeError) as e:
+            raise ConfigurationError(f"Malformed proposal record for '{payload.get('proposal_id', 'unknown')}': {e}") from e
 
 

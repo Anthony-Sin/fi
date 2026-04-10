@@ -3,6 +3,7 @@
 from desktop_automation_agent._time import utc_now
 
 import json
+import logging
 import re
 from collections import Counter
 from dataclasses import dataclass
@@ -11,6 +12,7 @@ from math import sqrt
 from pathlib import Path
 from typing import Any
 
+from .exceptions import ConfigurationError
 from desktop_automation_agent.models import (
     WorkflowSkillDocument,
     WorkflowSkillSearchMatch,
@@ -20,9 +22,23 @@ from desktop_automation_agent.models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class WorkflowSkillStore:
     storage_path: str
+
+    def __post_init__(self) -> None:
+        """Validate the skill store file exists and is well-formed on startup."""
+        try:
+            self._load_snapshot()
+        except ConfigurationError as e:
+            logger.error(f"Failed to initialize WorkflowSkillStore: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during WorkflowSkillStore initialization: {e}")
+            raise ConfigurationError(f"Unexpected error during initialization: {e}") from e
 
     def record_successful_workflow(
         self,
@@ -87,7 +103,8 @@ class WorkflowSkillStore:
     def get_skill(self, workflow_name: str) -> WorkflowSkillStoreResult:
         skill = self._find_skill(self._load_snapshot(), workflow_name)
         if skill is None:
-            return WorkflowSkillStoreResult(succeeded=False, reason="Workflow skill not found.")
+            logger.warning(f"Workflow skill not found: {workflow_name}")
+            return WorkflowSkillStoreResult(succeeded=False, reason=f"Workflow skill not found: {workflow_name}")
         return WorkflowSkillStoreResult(succeeded=True, skill=skill)
 
     def search_skills(
@@ -166,7 +183,8 @@ class WorkflowSkillStore:
             return result
         match = next((item for item in result.skill.versions if item.version == version), None)
         if match is None:
-            return WorkflowSkillStoreResult(succeeded=False, reason="Workflow skill version not found.")
+            logger.warning(f"Workflow skill version not found: {workflow_name} v{version}")
+            return WorkflowSkillStoreResult(succeeded=False, reason=f"Workflow skill version not found: {workflow_name} v{version}")
         historical = WorkflowSkillDocument(
             workflow_name=result.skill.workflow_name,
             description=match.description,
@@ -247,7 +265,15 @@ class WorkflowSkillStore:
         path = Path(self.storage_path)
         if not path.exists():
             return []
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            logger.error(f"Malformed JSON in skill store at {self.storage_path}: {e}")
+            raise ConfigurationError(f"Malformed JSON in skill store: {e}") from e
+
+        if not isinstance(payload, dict):
+            raise ConfigurationError(f"Skill store payload must be a JSON object, got {type(payload).__name__}")
+
         return [self._deserialize_skill(item) for item in payload.get("skills", [])]
 
     def _save_snapshot(self, snapshot: list[WorkflowSkillDocument]) -> None:
@@ -286,34 +312,43 @@ class WorkflowSkillStore:
         }
 
     def _deserialize_skill(self, payload: dict[str, Any]) -> WorkflowSkillDocument:
-        return WorkflowSkillDocument(
-            workflow_name=payload["workflow_name"],
-            description=payload["description"],
-            current_version=int(payload.get("current_version", 1)),
-            versions=[
-                WorkflowSkillVersion(
-                    version=int(version["version"]),
-                    description=version["description"],
-                    steps=[
-                        WorkflowSkillStep(
-                            step_name=step["step_name"],
-                            parameters=dict(step.get("parameters", {})),
-                        )
-                        for step in version.get("steps", [])
-                    ],
-                    execution_time_seconds=float(version.get("execution_time_seconds", 0.0)),
-                    contextual_notes=version.get("contextual_notes"),
-                    task_description=version.get("task_description"),
-                    timestamp=datetime.fromisoformat(version["timestamp"]),
-                    deprecated=bool(version.get("deprecated", False)),
-                )
-                for version in payload.get("versions", [])
-            ],
-            deprecated=bool(payload.get("deprecated", False)),
-            deprecated_reason=payload.get("deprecated_reason"),
-            updated_at=datetime.fromisoformat(payload["updated_at"])
-            if payload.get("updated_at")
-            else utc_now(),
-        )
+        for field in ("workflow_name", "description"):
+            if field not in payload:
+                raise ConfigurationError(f"Missing required field '{field}' in skill payload")
+
+        try:
+            return WorkflowSkillDocument(
+                workflow_name=str(payload["workflow_name"]),
+                description=str(payload["description"]),
+                current_version=int(payload.get("current_version", 1)),
+                versions=[
+                    WorkflowSkillVersion(
+                        version=int(version["version"]),
+                        description=str(version.get("description", "")),
+                        steps=[
+                            WorkflowSkillStep(
+                                step_name=str(step["step_name"]),
+                                parameters=dict(step.get("parameters", {})),
+                            )
+                            for step in version.get("steps", [])
+                            if "step_name" in step
+                        ],
+                        execution_time_seconds=float(version.get("execution_time_seconds", 0.0)),
+                        contextual_notes=version.get("contextual_notes"),
+                        task_description=version.get("task_description"),
+                        timestamp=datetime.fromisoformat(version["timestamp"]),
+                        deprecated=bool(version.get("deprecated", False)),
+                    )
+                    for version in payload.get("versions", [])
+                    if "version" in version and "timestamp" in version
+                ],
+                deprecated=bool(payload.get("deprecated", False)),
+                deprecated_reason=payload.get("deprecated_reason"),
+                updated_at=datetime.fromisoformat(payload["updated_at"])
+                if payload.get("updated_at")
+                else utc_now(),
+            )
+        except (KeyError, ValueError, TypeError) as e:
+            raise ConfigurationError(f"Malformed skill record for '{payload.get('workflow_name', 'unknown')}': {e}") from e
 
 

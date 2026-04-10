@@ -3,6 +3,7 @@
 from desktop_automation_agent._time import utc_now
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -17,6 +18,9 @@ from desktop_automation_agent.models import (
     StepRetryRateMetric,
     WorkflowSuccessMetric,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -372,7 +376,17 @@ class PerformanceMetricsCollector:
                 "dlq_depths": [],
                 "sessions": [],
             }
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, Exception) as e:
+            logger.warning(f"Failed to load performance metrics from {self.storage_path}: {e}")
+            return {
+                "step_executions": [],
+                "retries": [],
+                "workflow_runs": [],
+                "dlq_depths": [],
+                "sessions": [],
+            }
         payload.setdefault("step_executions", [])
         payload.setdefault("retries", [])
         payload.setdefault("workflow_runs", [])
@@ -381,9 +395,12 @@ class PerformanceMetricsCollector:
         return payload
 
     def _save_snapshot(self, snapshot: dict) -> None:
-        path = Path(self.storage_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
+        try:
+            path = Path(self.storage_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to save performance metrics to {self.storage_path}: {e}")
 
     def _percentile(self, values: list[float], ratio: float) -> float:
         if not values:

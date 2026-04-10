@@ -2,14 +2,19 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.wintypes
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from desktop_automation_agent.models import (
     ThemeDetectionResult,
     ThemeTemplateReferenceSet,
     UITheme,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -65,6 +70,13 @@ class ScreenBrightnessThemeHeuristic:
 
     def detect_theme(self) -> ThemeDetectionResult:
         image = self.capture_backend.capture()
+        if image is None:
+            return ThemeDetectionResult(
+                theme=UITheme.UNKNOWN,
+                detected_with="screen_heuristic",
+                confidence=0.0,
+                reason="Failed to capture screen for theme detection.",
+            )
         grayscale = image.convert("L").resize((64, 64))
         histogram = grayscale.histogram()
         total = float(sum(histogram)) or 1.0
@@ -108,22 +120,26 @@ class ThemeAdaptationModule:
     )
 
     def detect_theme_on_startup(self) -> ThemeDetectionResult:
-        if self.os_theme_backend is not None:
-            detected = self.os_theme_backend.detect_theme()
+        """Detect the UI theme using OS settings or visual heuristics."""
+        try:
+            if self.os_theme_backend is not None:
+                detected = self.os_theme_backend.detect_theme()
             if detected is not None:
                 self.active_detection = detected
                 return detected
 
-        if self.heuristic_detector is not None:
-            detected = self.heuristic_detector.detect_theme()
-            self.active_detection = detected
-            return detected
+            if self.heuristic_detector is not None:
+                detected = self.heuristic_detector.detect_theme()
+                self.active_detection = detected
+                return detected
+        except Exception as e:
+            logger.warning("Theme detection failed: %s", e)
 
         self.active_detection = ThemeDetectionResult(
             theme=UITheme.UNKNOWN,
             detected_with="default",
             confidence=0.0,
-            reason="No theme detector is configured.",
+            reason="No theme detector is configured or detection failed.",
         )
         return self.active_detection
 

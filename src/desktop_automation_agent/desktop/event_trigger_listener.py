@@ -3,6 +3,7 @@
 from desktop_automation_agent._time import utc_now
 
 import json
+import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -19,6 +20,9 @@ from desktop_automation_agent.models import (
     EventTriggerRecord,
     TriggerType,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -42,13 +46,17 @@ class EventDrivenTriggerListener:
     _timer_due_at: dict[str, datetime] = field(default_factory=dict, init=False, repr=False)
 
     def start(self) -> None:
-        with self._lock:
-            if self._thread is not None and self._thread.is_alive():
-                return
-            self._prime_state()
-            self._stop_event.clear()
-            self._thread = self.thread_factory(target=self._run_loop, daemon=True)
-            self._thread.start()
+        """Start the event listener loop in a background thread."""
+        try:
+            with self._lock:
+                if self._thread is not None and self._thread.is_alive():
+                    return
+                self._prime_state()
+                self._stop_event.clear()
+                self._thread = self.thread_factory(target=self._run_loop, daemon=True)
+                self._thread.start()
+        except Exception as e:
+            logger.warning("Failed to start EventDrivenTriggerListener: %s", e)
 
     def stop(self, *, wait: bool = True, timeout_seconds: float = 2.0) -> None:
         with self._lock:
@@ -78,12 +86,16 @@ class EventDrivenTriggerListener:
             return EventTriggerListenerResult(succeeded=True, triggers=list(self._triggers))
 
     def list_events(self) -> EventTriggerListenerResult:
-        path = Path(self.storage_path)
-        if not path.exists():
-            return EventTriggerListenerResult(succeeded=True, events=[])
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        events = [self._deserialize_event(item) for item in payload.get("events", [])]
-        return EventTriggerListenerResult(succeeded=True, events=events)
+        try:
+            path = Path(self.storage_path)
+            if not path.exists():
+                return EventTriggerListenerResult(succeeded=True, events=[])
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            events = [self._deserialize_event(item) for item in payload.get("events", [])]
+            return EventTriggerListenerResult(succeeded=True, events=events)
+        except Exception as e:
+            logger.warning(f"Failed to list events from {self.storage_path}: {e}")
+            return EventTriggerListenerResult(succeeded=False, reason=str(e))
 
     def status(self) -> EventTriggerListenerResult:
         with self._lock:
@@ -97,8 +109,12 @@ class EventDrivenTriggerListener:
 
     def _run_loop(self) -> None:
         while not self._stop_event.is_set():
-            for event in self._poll_triggers():
-                self._record_event(event)
+            try:
+                for event in self._poll_triggers():
+                    self._record_event(event)
+            except Exception as e:
+                logger.warning("Error in event listener loop: %s", e)
+
             if self._stop_event.is_set():
                 break
             self.sleep_fn(self.polling_interval_seconds)
@@ -229,15 +245,25 @@ class EventDrivenTriggerListener:
     def _record_event(self, event: EventTriggerRecord) -> None:
         with self._lock:
             self._last_event = event
-        path = Path(self.storage_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"events": []}
-        if path.exists():
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        payload.setdefault("events", []).append(self._serialize_event(event))
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        try:
+            path = Path(self.storage_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {"events": []}
+            if path.exists():
+                try:
+                    payload = json.loads(path.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    logger.warning(f"Corrupt event storage file at {self.storage_path}")
+            payload.setdefault("events", []).append(self._serialize_event(event))
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to record event to {self.storage_path}: {e}")
+
         if self.callback is not None:
-            self.callback(event)
+            try:
+                self.callback(event)
+            except Exception as e:
+                logger.warning(f"Event callback failed: {e}")
 
     def _prime_state(self) -> None:
         if self.window_manager is not None:

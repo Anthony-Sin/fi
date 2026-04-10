@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from time import sleep
-from typing import Callable
+from typing import Callable, Any
 
 from desktop_automation_agent.contracts import ScreenshotBackend
 from desktop_automation_agent.models import (
@@ -14,20 +15,27 @@ from desktop_automation_agent.models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class PyAutoGUIScreenshotBackend:
-    def capture_screenshot_to_path(self, path: str | None = None, monitor_id: str | None = None) -> str:
-        from datetime import datetime, timezone
-        from pathlib import Path
+    def capture_screenshot_to_path(self, path: str | None = None, monitor_id: str | None = None) -> str | None:
+        try:
+            from datetime import datetime, timezone
+            from pathlib import Path
 
-        import pyautogui
+            import pyautogui
 
-        target = Path(path) if path is not None else Path(
-            f"verification_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%f')}.png"
-        )
-        screenshot = pyautogui.screenshot()
-        screenshot.save(target)
-        return str(target)
+            target = Path(path) if path is not None else Path(
+                f"verification_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%f')}.png"
+            )
+            screenshot = pyautogui.screenshot()
+            screenshot.save(target)
+            return str(target)
+        except Exception as e:
+            logger.warning(f"PyAutoGUI screenshot failed: {e}")
+            return None
 
 
 @dataclass(slots=True)
@@ -45,12 +53,43 @@ class ScreenStateVerifier:
         checks: list[ScreenVerificationCheck],
         screenshot_path: str | None = None,
     ) -> ScreenVerificationResult:
-        captured_path = self.screenshot_backend.capture_screenshot_to_path(screenshot_path)
+        """Verify the current screen state against a set of checks."""
+        try:
+            captured_path = self.screenshot_backend.capture_screenshot_to_path(screenshot_path)
+        except Exception as e:
+            logger.warning("Capture failed during verification: %s", e)
+            captured_path = None
+
+        if captured_path is None:
+            return ScreenVerificationResult(
+                passed_checks=[],
+                failed_checks=[
+                    ScreenVerificationCheckResult(
+                        check_id=check.check_id,
+                        check_type=check.check_type,
+                        passed=False,
+                        detail="Failed to capture screenshot for verification.",
+                    )
+                    for check in checks
+                ],
+                screenshot_path=None,
+            )
+
         passed: list[ScreenVerificationCheckResult] = []
         failed: list[ScreenVerificationCheckResult] = []
 
         for check in checks:
-            result = self._poll_check(check, captured_path)
+            try:
+                result = self._poll_check(check, captured_path)
+            except Exception as e:
+                logger.warning("Check %s failed with exception: %s", check.check_id, e)
+                result = ScreenVerificationCheckResult(
+                    check_id=check.check_id,
+                    check_type=check.check_type,
+                    passed=False,
+                    detail=f"Check failed due to internal error: {e}",
+                )
+
             if result.passed:
                 passed.append(result)
             else:

@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from time import sleep
-from typing import Callable
+from typing import Callable, Any
 
 from desktop_automation_agent.contracts import DifferenceBackend, ScreenCaptureBackend
 from desktop_automation_agent.models import ScreenChangeEvent, ScreenChangeResult, UIStateFingerprint
 from desktop_automation_agent.desktop.ui_state_fingerprinter import UIStateFingerprinter
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -15,17 +19,25 @@ class PyAutoGUIScreenCaptureBackend:
         self,
         region_of_interest: tuple[int, int, int, int] | None = None,
         monitor_id: str | None = None,
-    ):
-        import pyautogui
+    ) -> Any | None:
+        try:
+            import pyautogui
 
-        if region_of_interest is None:
-            return pyautogui.screenshot()
-        left, top, right, bottom = region_of_interest
-        return pyautogui.screenshot(region=(left, top, right - left, bottom - top))
+            if region_of_interest is None:
+                return pyautogui.screenshot()
+            left, top, right, bottom = region_of_interest
+            return pyautogui.screenshot(region=(left, top, right - left, bottom - top))
+        except Exception as e:
+            logger.warning(f"PyAutoGUI capture failed: {e}")
+            return None
 
-    def save(self, image, path: str) -> str:
-        image.save(path)
-        return path
+    def save(self, image: Any, path: str) -> str | None:
+        try:
+            image.save(path)
+            return path
+        except Exception as e:
+            logger.warning(f"Failed to save image to {path}: {e}")
+            return None
 
 
 @dataclass(slots=True)
@@ -48,7 +60,7 @@ class ScreenChangeDetectionMonitor:
 
     def sample_change(
         self,
-        previous_image,
+        previous_image: Any,
         *,
         region_of_interest: tuple[int, int, int, int] | None = None,
         change_threshold: float = 0.1,
@@ -56,6 +68,11 @@ class ScreenChangeDetectionMonitor:
         monitor_id: str | None = None,
     ) -> ScreenChangeResult:
         current_image = self.capture_backend.capture(region_of_interest, monitor_id=monitor_id)
+        if current_image is None or previous_image is None:
+            return ScreenChangeResult(
+                changed=False,
+                reason="Unable to capture screen for comparison.",
+            )
         difference = self.difference_backend.compute_difference(previous_image, current_image)
         if difference >= change_threshold:
             saved_path = self.capture_backend.save(current_image, screenshot_path) if screenshot_path else None
@@ -83,13 +100,31 @@ class ScreenChangeDetectionMonitor:
         screenshot_path: str | None = None,
         monitor_id: str | None = None,
     ) -> ScreenChangeResult:
-        previous_image = self.capture_backend.capture(region_of_interest, monitor_id=monitor_id)
+        """Wait for the screen content to change beyond the specified threshold."""
+        try:
+            previous_image = self.capture_backend.capture(region_of_interest, monitor_id=monitor_id)
+        except Exception as e:
+            logger.warning("Initial capture failed in ChangeMonitor: %s", e)
+            return ScreenChangeResult(succeeded=False, reason=f"Initial capture failed: {e}")
         attempts = max(1, int(round(timeout_seconds / max(polling_interval_seconds, 0.01))))
         latest_reason = "No meaningful change detected."
 
         for attempt in range(attempts):
-            current_image = self.capture_backend.capture(region_of_interest, monitor_id=monitor_id)
-            difference = self.difference_backend.compute_difference(previous_image, current_image)
+            try:
+                current_image = self.capture_backend.capture(region_of_interest, monitor_id=monitor_id)
+                if current_image is None or previous_image is None:
+                    latest_reason = "Unable to capture screen for comparison."
+                    if attempt < attempts - 1:
+                        self.sleep_fn(polling_interval_seconds)
+                        if previous_image is None:
+                            previous_image = self.capture_backend.capture(region_of_interest, monitor_id=monitor_id)
+                        continue
+                    break
+
+                difference = self.difference_backend.compute_difference(previous_image, current_image)
+            except Exception as e:
+                logger.warning("Comparison failed in ChangeMonitor loop: %s", e)
+                difference = 0.0
             if difference >= change_threshold:
                 saved_path = self.capture_backend.save(current_image, screenshot_path) if screenshot_path else None
                 return ScreenChangeResult(
@@ -119,7 +154,8 @@ class ScreenChangeDetectionMonitor:
         region_of_interest: tuple[int, int, int, int] | None = None,
     ) -> float:
         if self.fingerprinter is None:
-            raise ValueError("UI fingerprinter is not configured for this monitor.")
+            logger.warning("UI fingerprinter is not configured for this monitor.")
+            return 0.0
         return self.fingerprinter.compare_to_current(
             baseline_fingerprint,
             region_of_interest=region_of_interest,

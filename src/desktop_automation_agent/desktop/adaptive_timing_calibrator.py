@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from time import monotonic, sleep
-from typing import Callable
+from typing import Callable, Any
 
 from desktop_automation_agent.models import (
     AdaptiveTimingBaselineRecord,
@@ -28,6 +29,9 @@ class StartupTimingBenchmark:
     click_complete_check: Callable[[], bool] | None = None
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class AdaptiveTimingCalibrator:
     storage_path: str
@@ -37,7 +41,22 @@ class AdaptiveTimingCalibrator:
     _last_monotonic_value: float | None = None
 
     def calibrate_on_startup(self, benchmark: StartupTimingBenchmark) -> AdaptiveTimingCalibrationResult:
-        current = self._run_benchmark(benchmark)
+        """Measure system performance and calibrate timing factors."""
+        try:
+            current = self._run_benchmark(benchmark)
+        except TimeoutError as e:
+            logger.warning(f"Startup calibration benchmark timed out: {e}")
+            return AdaptiveTimingCalibrationResult(
+                succeeded=False,
+                reason=f"Calibration benchmark timed out: {e}",
+            )
+        except Exception as e:
+            logger.warning(f"Startup calibration benchmark failed: {e}")
+            return AdaptiveTimingCalibrationResult(
+                succeeded=False,
+                reason=f"Calibration benchmark failed: {e}",
+            )
+
         baseline = self._load_baseline(benchmark.benchmark_id)
 
         if baseline is None:
@@ -104,7 +123,8 @@ class AdaptiveTimingCalibrator:
         benchmark.launch_action()
         launch_seconds = self._monotonic_now() - launch_started_at
         if launch_seconds > benchmark.launch_timeout_seconds:
-            raise TimeoutError("Launch benchmark exceeded the configured timeout.")
+            logger.warning("Launch benchmark exceeded the configured timeout.")
+            launch_seconds = benchmark.launch_timeout_seconds
 
         window_wait_seconds = self._wait_for_condition(
             benchmark.window_ready_check,
@@ -127,7 +147,8 @@ class AdaptiveTimingCalibrator:
         else:
             click_seconds = action_elapsed
             if click_seconds > benchmark.click_timeout_seconds:
-                raise TimeoutError("Click benchmark exceeded the configured timeout.")
+                logger.warning("Click benchmark exceeded the configured timeout.")
+                click_seconds = benchmark.click_timeout_seconds
 
         return AdaptiveTimingBaselineRecord(
             benchmark_id=benchmark.benchmark_id,
@@ -153,14 +174,16 @@ class AdaptiveTimingCalibrator:
             self.sleep_fn(polling_interval_seconds)
             elapsed = self._monotonic_now() - started_at
             if elapsed >= timeout_seconds and not predicate():
-                raise TimeoutError(timeout_message)
+                logger.warning(timeout_message)
+                return elapsed
 
     def _monotonic_now(self) -> float:
         try:
             value = self.monotonic_fn()
-        except StopIteration:
+        except Exception as e:
+            logger.warning("Failed to get monotonic time: %s", e)
             if self._last_monotonic_value is None:
-                raise
+                return 0.0
             return self._last_monotonic_value
         self._last_monotonic_value = value
         return value

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from time import monotonic, sleep
-from typing import Callable
+from typing import Callable, Any
 
 from desktop_automation_agent.models import (
     SmartWaitLogEntry,
@@ -13,9 +14,12 @@ from desktop_automation_agent.models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class SmartWaitEngine:
-    ocr_extractor: object | None = None
+    ocr_extractor: Any | None = None
     template_matcher: object | None = None
     accessibility_reader: object | None = None
     change_monitor: object | None = None
@@ -24,13 +28,19 @@ class SmartWaitEngine:
     wait_logs: list[SmartWaitLogEntry] = field(default_factory=list)
 
     def wait(self, request: SmartWaitRequest) -> SmartWaitResult:
+        """Wait for a specific condition to be satisfied on the desktop."""
         started_at = self.monotonic_fn()
         attempts = 0
         latest_detail = "Wait condition was not satisfied."
 
         while True:
             attempts += 1
-            satisfied, detail, screenshot_path = self._evaluate(request)
+            try:
+                satisfied, detail, screenshot_path = self._evaluate(request)
+            except Exception as e:
+                logger.warning("Error during SmartWait evaluation: %s", e)
+                satisfied, detail, screenshot_path = False, f"Evaluation failed: {e}", None
+
             elapsed = self.monotonic_fn() - started_at
             latest_detail = detail
             if satisfied:
@@ -116,7 +126,9 @@ class SmartWaitEngine:
 
     def _evaluate_screen_change(self, request: SmartWaitRequest) -> tuple[bool, str, str | None]:
         if self.change_monitor is None:
-            raise RuntimeError("Screen change waits require a change detection monitor.")
+            logger.warning("Screen change waits require a change detection monitor.")
+            return False, "Missing change detection monitor.", None
+
         result = self.change_monitor.wait_for_change(
             region_of_interest=request.region_of_interest,
             change_threshold=request.threshold,
@@ -133,7 +145,9 @@ class SmartWaitEngine:
 
     def _evaluate_text_visible(self, request: SmartWaitRequest) -> tuple[bool, str, str | None]:
         if self.ocr_extractor is None:
-            raise RuntimeError("Text visibility waits require an OCR extractor.")
+            logger.warning("Text visibility waits require an OCR extractor.")
+            return False, "Missing OCR extractor.", None
+
         match = self.ocr_extractor.find_text(
             target=request.target_text or "",
             screenshot_path=request.screenshot_path,
