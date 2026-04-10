@@ -53,7 +53,13 @@ class ScreenStateVerifier:
         checks: list[ScreenVerificationCheck],
         screenshot_path: str | None = None,
     ) -> ScreenVerificationResult:
-        captured_path = self.screenshot_backend.capture_screenshot_to_path(screenshot_path)
+        """Verify the current screen state against a set of checks."""
+        try:
+            captured_path = self.screenshot_backend.capture_screenshot_to_path(screenshot_path)
+        except Exception as e:
+            logger.warning("Capture failed during verification: %s", e)
+            captured_path = None
+
         if captured_path is None:
             return ScreenVerificationResult(
                 passed_checks=[],
@@ -73,7 +79,17 @@ class ScreenStateVerifier:
         failed: list[ScreenVerificationCheckResult] = []
 
         for check in checks:
-            result = self._poll_check(check, captured_path)
+            try:
+                result = self._poll_check(check, captured_path)
+            except Exception as e:
+                logger.warning("Check %s failed with exception: %s", check.check_id, e)
+                result = ScreenVerificationCheckResult(
+                    check_id=check.check_id,
+                    check_type=check.check_type,
+                    passed=False,
+                    detail=f"Check failed due to internal error: {e}",
+                )
+
             if result.passed:
                 passed.append(result)
             else:

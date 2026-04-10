@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 @dataclass(slots=True)
 class Win32ClipboardBackend:
     def read(self) -> ClipboardContent:
+        """Read content from the Win32 clipboard."""
         user32 = ctypes.windll.user32
         kernel32 = ctypes.windll.kernel32
 
@@ -85,6 +86,7 @@ class Win32ClipboardBackend:
             user32.CloseClipboard()
 
     def write_text(self, text: str, encoding: str = "utf-8") -> bool:
+        """Write text to the Win32 clipboard."""
         try:
             normalized = self._normalize_text(text, encoding)
             encoded = normalized.encode("utf-16-le") + b"\x00\x00"
@@ -119,6 +121,7 @@ class Win32ClipboardBackend:
             return False
 
     def write_image(self, image_bytes: bytes) -> bool:
+        """Write image DIB data to the Win32 clipboard."""
         try:
             if not self._open_and_clear():
                 return False

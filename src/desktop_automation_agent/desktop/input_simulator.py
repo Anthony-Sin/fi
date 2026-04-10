@@ -47,13 +47,15 @@ logger = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class PyAutoGUIBackend:
-    _module: Any
+    _module: Any = None
 
     @classmethod
     def create(cls) -> "PyAutoGUIBackend":
         try:
             import pyautogui
 
+            # Configure fail-safe to avoid infinite loops if mouse is moved to corner
+            pyautogui.FAILSAFE = True
             return cls(_module=pyautogui)
         except ImportError:
             logger.warning("pyautogui not found, using mock backend.")
@@ -341,42 +343,53 @@ class SafeInputSimulator:
     def _execute_action(self, action: InputAction) -> float:
         total_delay = 0.0
         success = False
-        if action.action_type is InputActionType.CLICK:
-            x, y = action.position or self._center(action.target.element_bounds)
-            total_delay += self._apply_pre_action_delay(action)
-            success = self._backend.click(x, y, action.button)
-            total_delay += self._apply_post_action_delay(action)
+        try:
+            if action.action_type is InputActionType.CLICK:
+                coords = action.position or self._center(
+                    action.target.element_bounds if action.target else None
+                )
+                if coords:
+                    x, y = coords
+                    total_delay += self._apply_pre_action_delay(action)
+                    success = self._backend.click(x, y, action.button)
+                    total_delay += self._apply_post_action_delay(action)
+                else:
+                    logger.warning("Could not determine coordinates for click action.")
 
-        elif action.action_type is InputActionType.KEYPRESS:
-            total_delay += self._apply_pre_action_delay(action)
-            success = self._backend.press(action.key or "")
-            total_delay += self._apply_post_action_delay(action)
+            elif action.action_type is InputActionType.KEYPRESS:
+                total_delay += self._apply_pre_action_delay(action)
+                success = self._backend.press(action.key or "")
+                total_delay += self._apply_post_action_delay(action)
 
-        elif action.action_type is InputActionType.TYPE_TEXT:
-            delay, success = self._apply_typing_action(action)
-            total_delay += delay
-            total_delay += self._apply_post_action_delay(action)
+            elif action.action_type is InputActionType.TYPE_TEXT:
+                delay, success = self._apply_typing_action(action)
+                total_delay += delay
+                total_delay += self._apply_post_action_delay(action)
 
-        elif action.action_type is InputActionType.SCROLL:
-            total_delay += self._apply_pre_action_delay(action)
-            success = self._backend.scroll(action.scroll_amount or 0)
-            total_delay += self._apply_post_action_delay(action)
+            elif action.action_type is InputActionType.SCROLL:
+                total_delay += self._apply_pre_action_delay(action)
+                success = self._backend.scroll(action.scroll_amount or 0)
+                total_delay += self._apply_post_action_delay(action)
 
-        elif action.action_type is InputActionType.HOTKEY:
-            total_delay += self._apply_pre_action_delay(action)
-            success = self._backend.hotkey(*action.hotkey)
-            total_delay += self._apply_post_action_delay(action)
-        else:
-            logger.warning(f"Unsupported action type: {action.action_type}")
+            elif action.action_type is InputActionType.HOTKEY:
+                total_delay += self._apply_pre_action_delay(action)
+                success = self._backend.hotkey(*action.hotkey)
+                total_delay += self._apply_post_action_delay(action)
+            else:
+                logger.warning("Unsupported action type: %s", action.action_type)
+                return total_delay
+        except Exception as e:
+            logger.warning("Action %s execution failed with exception: %s", action.action_type, e)
             return total_delay
 
         if not success:
-            logger.warning(f"Action {action.action_type} execution reported failure.")
+            logger.warning("Action %s execution reported failure.", action.action_type)
         return total_delay
 
-    def _center(self, bounds: tuple[int, int, int, int] | None) -> tuple[int, int]:
+    def _center(self, bounds: tuple[int, int, int, int] | None) -> tuple[int, int] | None:
         if bounds is None:
-            raise ValueError("Bounds are required to calculate the target center.")
+            logger.warning("Bounds are required to calculate the target center, but were None.")
+            return None
         left, top, right, bottom = bounds
         return ((left + right) // 2, (top + bottom) // 2)
 

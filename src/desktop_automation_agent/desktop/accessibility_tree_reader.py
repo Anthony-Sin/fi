@@ -189,10 +189,15 @@ class AccessibilityTreeReader:
             self.raw_window_backend = Win32RawWindowBackend()
 
     def read_active_application_tree(self) -> AccessibilityTree:
-        tree = self.accessibility_backend.get_active_application_tree() if self.accessibility_backend else None
-        if tree is not None and tree.root is not None:
-            return tree
-        return self._read_fallback_tree()
+        """Read the accessibility tree for the currently active application."""
+        try:
+            tree = self.accessibility_backend.get_active_application_tree() if self.accessibility_backend else None
+            if tree is not None and tree.root is not None:
+                return tree
+            return self._read_fallback_tree()
+        except Exception as e:
+            logger.warning("Failed to read active application tree: %s", e)
+            return AccessibilityTree(application_name=None, root=None)
 
     def find_elements(
         self,
@@ -201,17 +206,22 @@ class AccessibilityTreeReader:
         role: str | None = None,
         value: str | None = None,
     ) -> AccessibilityQueryResult:
-        tree = self.read_active_application_tree()
-        used_fallback = tree.root.source == "raw_window" if tree.root is not None else False
-        if tree.root is None:
-            return AccessibilityQueryResult(matches=[], used_fallback=used_fallback)
+        """Find elements matching the specified criteria in the active application tree."""
+        try:
+            tree = self.read_active_application_tree()
+            used_fallback = tree.root.source == "raw_window" if tree.root is not None else False
+            if tree.root is None:
+                return AccessibilityQueryResult(matches=[], used_fallback=used_fallback)
 
-        matches = [
-            element
-            for element in self._walk(tree.root)
-            if self._matches(element, name=name, role=role, value=value)
-        ]
-        return AccessibilityQueryResult(matches=matches, used_fallback=used_fallback)
+            matches = [
+                element
+                for element in self._walk(tree.root)
+                if self._matches(element, name=name, role=role, value=value)
+            ]
+            return AccessibilityQueryResult(matches=matches, used_fallback=used_fallback)
+        except Exception as e:
+            logger.warning("Element search failed: %s", e)
+            return AccessibilityQueryResult(matches=[], used_fallback=False)
 
     def enumerate_children(self, element: AccessibilityElement) -> list[AccessibilityElement]:
         if element.children:

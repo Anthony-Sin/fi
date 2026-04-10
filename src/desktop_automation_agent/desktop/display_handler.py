@@ -179,20 +179,30 @@ class MultiMonitorDisplayHandler:
         return DisplayConfigurationChangeResult(changed=False, baseline=baseline, current=current)
 
     def capture_image(self, *, monitor_id: str | None = None) -> Any | None:
-        backend = self._require_capture_backend()
-        if backend is None:
+        """Capture an image of the specified monitor or the virtual desktop."""
+        try:
+            backend = self._require_capture_backend()
+            if backend is None:
+                return None
+            monitor = self.get_monitor(monitor_id) if monitor_id is not None else None
+            return backend.capture(monitor)
+        except Exception as e:
+            logger.warning("Capture image failed: %s", e)
             return None
-        monitor = self.get_monitor(monitor_id) if monitor_id is not None else None
-        return backend.capture(monitor)
 
     def capture_screenshot_to_path(self, path: str, *, monitor_id: str | None = None) -> str | None:
-        backend = self._require_capture_backend()
-        if backend is None:
+        """Capture a screenshot and save it to the specified file path."""
+        try:
+            backend = self._require_capture_backend()
+            if backend is None:
+                return None
+            image = self.capture_image(monitor_id=monitor_id)
+            if image is None:
+                return None
+            return backend.save(image, path)
+        except Exception as e:
+            logger.warning("Capture screenshot to path failed: %s", e)
             return None
-        image = self.capture_image(monitor_id=monitor_id)
-        if image is None:
-            return None
-        return backend.save(image, path)
 
     def move_window_to_monitor(self, handle: int, monitor_id: str) -> WindowOperationResult:
         monitor = self.get_monitor(monitor_id)

@@ -28,13 +28,19 @@ class SmartWaitEngine:
     wait_logs: list[SmartWaitLogEntry] = field(default_factory=list)
 
     def wait(self, request: SmartWaitRequest) -> SmartWaitResult:
+        """Wait for a specific condition to be satisfied on the desktop."""
         started_at = self.monotonic_fn()
         attempts = 0
         latest_detail = "Wait condition was not satisfied."
 
         while True:
             attempts += 1
-            satisfied, detail, screenshot_path = self._evaluate(request)
+            try:
+                satisfied, detail, screenshot_path = self._evaluate(request)
+            except Exception as e:
+                logger.warning("Error during SmartWait evaluation: %s", e)
+                satisfied, detail, screenshot_path = False, f"Evaluation failed: {e}", None
+
             elapsed = self.monotonic_fn() - started_at
             latest_detail = detail
             if satisfied:

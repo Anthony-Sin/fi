@@ -26,7 +26,13 @@ class UIStateFingerprinter:
         *,
         region_of_interest: tuple[int, int, int, int] | None = None,
     ) -> UIStateFingerprint:
-        image = self.capture_backend.capture(region_of_interest)
+        """Capture a visual and structural fingerprint of the current UI state."""
+        try:
+            image = self.capture_backend.capture(region_of_interest)
+        except Exception as e:
+            logger.warning("Capture failed during fingerprinting: %s", e)
+            image = None
+
         if image is None:
             logger.warning("Capture failed during fingerprinting.")
             return UIStateFingerprint(
@@ -36,18 +42,28 @@ class UIStateFingerprinter:
                 screen_size=(0, 0),
                 window_count=0,
             )
-        width, height = self._get_image_size(image)
-        titles = self._extract_window_titles()
-        landmarks = self._extract_landmark_positions(width=width, height=height)
-        histogram = self._build_histogram(image)
+        try:
+            width, height = self._get_image_size(image)
+            titles = self._extract_window_titles()
+            landmarks = self._extract_landmark_positions(width=width, height=height)
+            histogram = self._build_histogram(image)
 
-        return UIStateFingerprint(
-            window_title_hash=self._hash_window_titles(titles),
-            landmark_positions=landmarks,
-            pixel_histogram=histogram,
-            screen_size=(width, height),
-            window_count=len(titles),
-        )
+            return UIStateFingerprint(
+                window_title_hash=self._hash_window_titles(titles),
+                landmark_positions=landmarks,
+                pixel_histogram=histogram,
+                screen_size=(width, height),
+                window_count=len(titles),
+            )
+        except Exception as e:
+            logger.warning("Failed to generate UI fingerprint: %s", e)
+            return UIStateFingerprint(
+                window_title_hash="",
+                landmark_positions={},
+                pixel_histogram=(),
+                screen_size=(0, 0),
+                window_count=0,
+            )
 
     def compare(
         self,

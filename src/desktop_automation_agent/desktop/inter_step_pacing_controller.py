@@ -51,6 +51,7 @@ class InterStepPacingController:
         return self.default_profile
 
     def before_action(self, context: PacingContext) -> PacingDecision:
+        """Calculate the required delay before executing an action."""
         profile = self.resolve_profile(
             account_name=context.account_name,
             application_name=context.application_name,
@@ -69,6 +70,7 @@ class InterStepPacingController:
         )
 
     def after_action(self, context: PacingContext) -> PacingDecision:
+        """Calculate the required delay after executing an action."""
         profile = self.resolve_profile(
             account_name=context.account_name,
             application_name=context.application_name,
@@ -93,6 +95,7 @@ class InterStepPacingController:
         account_name: str | None = None,
         application_name: str | None = None,
     ) -> list[PacingDecision]:
+        """Generate a sequence of pacing decisions for typing a string of text."""
         profile = self.resolve_profile(account_name=account_name, application_name=application_name)
         delays: list[PacingDecision] = []
         for _index, _character in enumerate(text):

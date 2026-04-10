@@ -36,20 +36,40 @@ class TesseractOCRBackend:
             return None
 
     def extract_blocks(self, image: Any, language: str) -> list[OCRTextBlock]:
+        """Extract text blocks from an image using pytesseract."""
         if image is None:
             return []
         try:
             import pytesseract
+
+            # Verify if language is installed
+            try:
+                languages = pytesseract.get_languages(config="")
+                if language not in languages:
+                    logger.warning("OCR language '%s' not found. Available: %s", language, languages)
+                    # Fallback to 'eng' if possible
+                    if "eng" in languages:
+                        language = "eng"
+                    else:
+                        return []
+            except Exception as lang_err:
+                logger.warning("Could not verify OCR languages: %s", lang_err)
 
             data = pytesseract.image_to_data(
                 image,
                 lang=language,
                 output_type=pytesseract.Output.DICT,
             )
-        except Exception as e:
-            logger.warning(f"pytesseract extraction failed: {e}")
+        except ImportError:
+            logger.warning("pytesseract is not installed.")
             return []
+        except Exception as e:
+            logger.warning("pytesseract extraction failed: %s", e)
+            return []
+
         blocks: list[OCRTextBlock] = []
+        if not data or "text" not in data:
+            return blocks
 
         for index, text in enumerate(data["text"]):
             normalized = (text or "").strip()

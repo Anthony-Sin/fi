@@ -120,22 +120,26 @@ class ThemeAdaptationModule:
     )
 
     def detect_theme_on_startup(self) -> ThemeDetectionResult:
-        if self.os_theme_backend is not None:
-            detected = self.os_theme_backend.detect_theme()
+        """Detect the UI theme using OS settings or visual heuristics."""
+        try:
+            if self.os_theme_backend is not None:
+                detected = self.os_theme_backend.detect_theme()
             if detected is not None:
                 self.active_detection = detected
                 return detected
 
-        if self.heuristic_detector is not None:
-            detected = self.heuristic_detector.detect_theme()
-            self.active_detection = detected
-            return detected
+            if self.heuristic_detector is not None:
+                detected = self.heuristic_detector.detect_theme()
+                self.active_detection = detected
+                return detected
+        except Exception as e:
+            logger.warning("Theme detection failed: %s", e)
 
         self.active_detection = ThemeDetectionResult(
             theme=UITheme.UNKNOWN,
             detected_with="default",
             confidence=0.0,
-            reason="No theme detector is configured.",
+            reason="No theme detector is configured or detection failed.",
         )
         return self.active_detection
 

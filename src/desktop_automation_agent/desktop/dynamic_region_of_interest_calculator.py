@@ -22,31 +22,37 @@ class DynamicRegionOfInterestCalculator:
     _last_zones: list[WindowZone] = field(default_factory=list, init=False, repr=False)
 
     def calculate_for_check(self, check: ScreenVerificationCheck) -> DynamicRegionResult:
-        active_window = self._focused_window()
-        if active_window is None:
-            return DynamicRegionResult(succeeded=False, reason="No focused application window is available.")
+        """Calculate a dynamic ROI for a screen check based on window state or element metadata."""
+        try:
+            active_window = self._focused_window()
+            if active_window is None:
+                return DynamicRegionResult(succeeded=False, reason="No focused application window is available.")
 
-        zones = self._zones_for_window(active_window)
-        zone_type = self._infer_zone(check)
-        zone = next((item for item in zones if item.zone_type is zone_type), None)
-        if zone is None:
-            zone = next((item for item in zones if item.zone_type is WindowZoneType.FULL_WINDOW), None)
-        if zone is None:
-            return DynamicRegionResult(succeeded=False, zones=zones, reason="Unable to calculate a region of interest.")
+            zones = self._zones_for_window(active_window)
+            zone_type = self._infer_zone(check)
+            zone = next((item for item in zones if item.zone_type is zone_type), None)
+            if zone is None:
+                zone = next((item for item in zones if item.zone_type is WindowZoneType.FULL_WINDOW), None)
+            if zone is None:
+                return DynamicRegionResult(succeeded=False, zones=zones, reason="Unable to calculate a region of interest.")
 
-        window_bounds = self._window_bounds(active_window)
-        return DynamicRegionResult(
-            succeeded=True,
-            roi=DynamicRegionOfInterest(
-                window_handle=active_window.handle,
-                bounds=zone.bounds,
-                zone_type=zone.zone_type,
-                window_bounds=window_bounds,
-                confidence=zone.confidence,
-                detail=f"Calculated ROI for {zone.zone_type.value} zone.",
-            ),
-            zones=zones,
-        )
+            window_bounds = self._window_bounds(active_window)
+            return DynamicRegionResult(
+                succeeded=True,
+                roi=DynamicRegionOfInterest(
+                    window_handle=active_window.handle,
+                    bounds=zone.bounds,
+                    zone_type=zone.zone_type,
+                    window_bounds=window_bounds,
+                    confidence=zone.confidence,
+                    detail=f"Calculated ROI for {zone.zone_type.value} zone.",
+                ),
+                zones=zones,
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Dynamic ROI calculation failed: %s", e)
+            return DynamicRegionResult(succeeded=False, reason=f"ROI calculation error: {e}")
 
     def zones_for_active_window(self) -> DynamicRegionResult:
         active_window = self._focused_window()

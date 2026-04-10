@@ -18,32 +18,48 @@ class DesktopPerceptionEngine:
         self._stop_on_first_success = stop_on_first_success
 
     def capture_state(self, context: CaptureContext | None = None) -> DesktopState:
+        """Capture the current state of the desktop using all registered providers."""
         context = context or CaptureContext()
         results: list[PerceptionResult] = []
 
         import threading
 
         threads = []
-        def safe_capture(p, ctx, res):
+        # Local result list to avoid race conditions on the main list
+        thread_results: list[PerceptionResult] = []
+        lock = threading.Lock()
+
+        def safe_capture(p: BasePerceptionProvider, ctx: CaptureContext) -> None:
             try:
-                res.append(p.capture(ctx))
+                result = p.capture(ctx)
+                with lock:
+                    thread_results.append(result)
             except Exception as e:
-                logger.warning(f"Provider {p.__class__.__name__} failed during capture: {e}")
-                from desktop_automation_agent.models import PerceptionResult
-                res.append(PerceptionResult(source=getattr(p, 'source', None), confidence=0.0, succeeded=False, error=str(e)))
+                logger.warning("Provider %s failed during capture: %s", p.__class__.__name__, e)
+                with lock:
+                    thread_results.append(
+                        PerceptionResult(
+                            source=getattr(p, "source", None),
+                            confidence=0.0,
+                            succeeded=False,
+                            error=str(e),
+                        )
+                    )
 
         for provider in self._providers:
-            if self._stop_on_first_success and results and any(r.succeeded for r in results):
-                break
+            # Check for stop condition BEFORE starting new threads
+            with lock:
+                if self._stop_on_first_success and thread_results and any(r.succeeded for r in thread_results):
+                    break
 
-            t = threading.Thread(target=safe_capture, args=(provider, context, results))
+            t = threading.Thread(target=safe_capture, args=(provider, context), daemon=True)
             threads.append(t)
             t.start()
 
         for t in threads:
-            t.join()
+            t.join(timeout=15.0)  # Add a safety timeout for threads
 
         return DesktopState(
             captured_at=datetime.now(timezone.utc),
-            results=results,
+            results=thread_results,
         )

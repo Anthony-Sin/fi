@@ -46,6 +46,7 @@ class EventDrivenTriggerListener:
     _timer_due_at: dict[str, datetime] = field(default_factory=dict, init=False, repr=False)
 
     def start(self) -> None:
+        """Start the event listener loop in a background thread."""
         try:
             with self._lock:
                 if self._thread is not None and self._thread.is_alive():
@@ -55,7 +56,7 @@ class EventDrivenTriggerListener:
                 self._thread = self.thread_factory(target=self._run_loop, daemon=True)
                 self._thread.start()
         except Exception as e:
-            logger.warning(f"Failed to start EventDrivenTriggerListener: {e}")
+            logger.warning("Failed to start EventDrivenTriggerListener: %s", e)
 
     def stop(self, *, wait: bool = True, timeout_seconds: float = 2.0) -> None:
         with self._lock:
@@ -108,8 +109,12 @@ class EventDrivenTriggerListener:
 
     def _run_loop(self) -> None:
         while not self._stop_event.is_set():
-            for event in self._poll_triggers():
-                self._record_event(event)
+            try:
+                for event in self._poll_triggers():
+                    self._record_event(event)
+            except Exception as e:
+                logger.warning("Error in event listener loop: %s", e)
+
             if self._stop_event.is_set():
                 break
             self.sleep_fn(self.polling_interval_seconds)

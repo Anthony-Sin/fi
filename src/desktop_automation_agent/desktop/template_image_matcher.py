@@ -165,7 +165,12 @@ class TemplateImageMatcher:
         screenshot_path: str | None,
         requests: list[TemplateSearchRequest],
     ) -> list[TemplateSearchResult]:
-        screenshot = self.backend.load_screenshot(screenshot_path)
+        """Search for multiple templates in a screenshot."""
+        try:
+            screenshot = self.backend.load_screenshot(screenshot_path)
+        except Exception as e:
+            logger.warning("Failed to load screenshot for template search: %s", e)
+            screenshot = None
         if screenshot is None:
             return [
                 TemplateSearchResult(
@@ -181,9 +186,13 @@ class TemplateImageMatcher:
         results: list[TemplateSearchResult] = []
 
         for request in requests:
-            prepared_request = self._prepare_request(request)
-            resolved_template_path = self._resolve_template_path(prepared_request)
-            template = self.backend.load_image(resolved_template_path)
+            try:
+                prepared_request = self._prepare_request(request)
+                resolved_template_path = self._resolve_template_path(prepared_request)
+                template = self.backend.load_image(resolved_template_path)
+            except Exception as e:
+                logger.warning("Failed to prepare or load template %s: %s", request.template_name, e)
+                template = None
             if template is None:
                 results.append(
                     TemplateSearchResult(
@@ -196,11 +205,15 @@ class TemplateImageMatcher:
                 )
                 continue
 
-            matches = self._find_matches_for_request(
-                screenshot=screenshot,
-                template=template,
-                request=prepared_request,
-            )
+            try:
+                matches = self._find_matches_for_request(
+                    screenshot=screenshot,
+                    template=template,
+                    request=prepared_request,
+                )
+            except Exception as e:
+                logger.warning("Matching failed for template %s: %s", prepared_request.template_name, e)
+                matches = []
             results.append(
                 TemplateSearchResult(
                     template_name=prepared_request.template_name,

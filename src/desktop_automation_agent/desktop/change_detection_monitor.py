@@ -100,22 +100,31 @@ class ScreenChangeDetectionMonitor:
         screenshot_path: str | None = None,
         monitor_id: str | None = None,
     ) -> ScreenChangeResult:
-        previous_image = self.capture_backend.capture(region_of_interest, monitor_id=monitor_id)
+        """Wait for the screen content to change beyond the specified threshold."""
+        try:
+            previous_image = self.capture_backend.capture(region_of_interest, monitor_id=monitor_id)
+        except Exception as e:
+            logger.warning("Initial capture failed in ChangeMonitor: %s", e)
+            return ScreenChangeResult(succeeded=False, reason=f"Initial capture failed: {e}")
         attempts = max(1, int(round(timeout_seconds / max(polling_interval_seconds, 0.01))))
         latest_reason = "No meaningful change detected."
 
         for attempt in range(attempts):
-            current_image = self.capture_backend.capture(region_of_interest, monitor_id=monitor_id)
-            if current_image is None or previous_image is None:
-                latest_reason = "Unable to capture screen for comparison."
-                if attempt < attempts - 1:
-                    self.sleep_fn(polling_interval_seconds)
-                    if previous_image is None:
-                        previous_image = self.capture_backend.capture(region_of_interest, monitor_id=monitor_id)
-                    continue
-                break
+            try:
+                current_image = self.capture_backend.capture(region_of_interest, monitor_id=monitor_id)
+                if current_image is None or previous_image is None:
+                    latest_reason = "Unable to capture screen for comparison."
+                    if attempt < attempts - 1:
+                        self.sleep_fn(polling_interval_seconds)
+                        if previous_image is None:
+                            previous_image = self.capture_backend.capture(region_of_interest, monitor_id=monitor_id)
+                        continue
+                    break
 
-            difference = self.difference_backend.compute_difference(previous_image, current_image)
+                difference = self.difference_backend.compute_difference(previous_image, current_image)
+            except Exception as e:
+                logger.warning("Comparison failed in ChangeMonitor loop: %s", e)
+                difference = 0.0
             if difference >= change_threshold:
                 saved_path = self.capture_backend.save(current_image, screenshot_path) if screenshot_path else None
                 return ScreenChangeResult(
